@@ -1,0 +1,25 @@
+{
+  "name": "qonfido-rag",
+  "version": "1.0.0",
+  "description": "Qonfido RAG - Financial Intelligence System",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"yellow,blue\" --prefix \"[{name}]\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000 --host 0.0.0.0",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend:win": "cd backend && .\\venv\\Scripts\\activate && uvicorn app.main:app --reload --port 8000 --host 0.0.0.0",
+    "dev:frontend:win": "cd frontend && npm run dev",
+    "setup": "npm run setup:backend && npm run setup:frontend",
+    "setup:backend": "cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt",
+    "setup:frontend": "cd frontend && npm install",
+    "install:all": "npm install && cd frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
+

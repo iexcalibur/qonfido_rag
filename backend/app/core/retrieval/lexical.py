@@ -128,6 +128,13 @@ class LexicalSearcher:
     def document_count(self) -> int:
         """Get the number of indexed documents."""
         return len(self._documents)
+    
+    def clear(self) -> None:
+        """Clear all indexed documents."""
+        self._index = None
+        self._documents = []
+        self._tokenized_docs = []
+        logger.info("Lexical index cleared")
 
 
 # =============================================================================

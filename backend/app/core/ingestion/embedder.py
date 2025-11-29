@@ -1,7 +1,7 @@
 """
 Qonfido RAG - Embedder
 =======================
-Generate embeddings using sentence-transformers.
+Generate embeddings using sentence-transformers with caching support.
 """
 
 import logging
@@ -18,6 +18,11 @@ class Embedder:
     
     Default model: BAAI/bge-m3 (1024 dimensions)
     Fallback: all-MiniLM-L6-v2 (384 dimensions)
+    
+    Features:
+    - Lazy model loading
+    - Embedding caching for efficiency
+    - Batch processing with progress bars
     """
 
     def __init__(
@@ -25,6 +30,7 @@ class Embedder:
         model_name: str = "BAAI/bge-m3",
         device: str | None = None,
         batch_size: int = 32,
+        use_cache: bool = True,
     ):
         """
         Initialize the embedder.
@@ -33,12 +39,25 @@ class Embedder:
             model_name: HuggingFace model name
             device: Device to use ('cpu', 'cuda', or None for auto)
             batch_size: Batch size for embedding
+            use_cache: Whether to use embedding cache
         """
         self.model_name = model_name
         self.batch_size = batch_size
+        self.use_cache = use_cache
         self._model = None
         self._device = device
         self._dimension = None
+        self._cache = None
+        
+        # Initialize cache if enabled
+        if use_cache:
+            try:
+                from app.services.cache import get_embedding_cache
+                self._cache = get_embedding_cache()
+                logger.info("Embedding cache enabled")
+            except Exception as e:
+                logger.warning(f"Could not initialize embedding cache: {e}")
+                self._cache = None
 
     @property
     def model(self):
@@ -87,7 +106,7 @@ class Embedder:
         show_progress: bool = True,
     ) -> np.ndarray:
         """
-        Generate embeddings for a list of texts.
+        Generate embeddings for a list of texts with caching.
         
         Args:
             texts: List of texts to embed
@@ -99,8 +118,46 @@ class Embedder:
         if not texts:
             return np.array([])
 
-        logger.info(f"Embedding {len(texts)} texts...")
+        # Try to get from cache first
+        if self._cache and self.use_cache:
+            cached_results, uncached_indices = self._cache.get_batch(texts)
+            
+            if not uncached_indices:
+                # All embeddings were cached!
+                logger.info(f"Cache hit: All {len(texts)} embeddings from cache")
+                return np.array(cached_results)
+            
+            # Partial cache hit
+            cache_hits = len(texts) - len(uncached_indices)
+            if cache_hits > 0:
+                logger.info(f"Cache: {cache_hits}/{len(texts)} hits, computing {len(uncached_indices)} new")
+            
+            # Embed only uncached texts
+            uncached_texts = [texts[i] for i in uncached_indices]
+            new_embeddings = self._embed_batch(uncached_texts, show_progress)
+            
+            # Cache new embeddings
+            for idx, embedding in zip(uncached_indices, new_embeddings):
+                self._cache.set_embedding(texts[idx], embedding)
+            
+            # Combine cached and new embeddings
+            result = []
+            new_idx = 0
+            for i, cached in enumerate(cached_results):
+                if cached is not None:
+                    result.append(cached)
+                else:
+                    result.append(new_embeddings[new_idx])
+                    new_idx += 1
+            
+            return np.array(result)
         
+        # No cache - embed all
+        logger.info(f"Embedding {len(texts)} texts (no cache)...")
+        return self._embed_batch(texts, show_progress)
+
+    def _embed_batch(self, texts: list[str], show_progress: bool = True) -> np.ndarray:
+        """Internal method to embed a batch of texts."""
         embeddings = self.model.encode(
             texts,
             batch_size=self.batch_size,
@@ -108,13 +165,11 @@ class Embedder:
             convert_to_numpy=True,
             normalize_embeddings=True,
         )
-        
-        logger.info(f"Generated embeddings: {embeddings.shape}")
         return embeddings
 
     def embed_query(self, query: str) -> np.ndarray:
         """
-        Generate embedding for a single query.
+        Generate embedding for a single query with caching.
         
         Args:
             query: Query text
@@ -122,12 +177,35 @@ class Embedder:
         Returns:
             numpy array of shape (embedding_dim,)
         """
+        # Check cache first
+        if self._cache and self.use_cache:
+            cached = self._cache.get_embedding(query)
+            if cached is not None:
+                logger.debug("Query embedding cache hit")
+                return cached
+        
+        # Generate embedding
         embedding = self.model.encode(
             query,
             convert_to_numpy=True,
             normalize_embeddings=True,
         )
+        
+        # Cache it
+        if self._cache and self.use_cache:
+            self._cache.set_embedding(query, embedding)
+        
         return embedding
+    
+    @property
+    def cache_stats(self) -> dict:
+        """Get cache statistics."""
+        if self._cache:
+            return {
+                "enabled": True,
+                "size": self._cache._cache.size,
+            }
+        return {"enabled": False, "size": 0}
 
 
 # =============================================================================
@@ -137,9 +215,9 @@ class Embedder:
 _embedder: Embedder | None = None
 
 
-def get_embedder(model_name: str = "BAAI/bge-m3") -> Embedder:
+def get_embedder(model_name: str = "BAAI/bge-m3", use_cache: bool = True) -> Embedder:
     """Get or create the default embedder instance."""
     global _embedder
     if _embedder is None:
-        _embedder = Embedder(model_name=model_name)
+        _embedder = Embedder(model_name=model_name, use_cache=use_cache)
     return _embedder

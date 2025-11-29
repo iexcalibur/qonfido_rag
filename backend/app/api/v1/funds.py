@@ -15,6 +15,7 @@ from app.api.schemas import (
     FundListResponse,
     FundSummary,
 )
+from app.config import settings
 from app.core.ingestion.loader import DataLoader
 
 router = APIRouter(tags=["Funds"])
@@ -29,9 +30,21 @@ def get_funds():
     """Get cached funds data."""
     global _loader, _funds_cache
     if _funds_cache is None:
-        _loader = DataLoader()
+        _loader = DataLoader(
+            data_dir=settings.data_dir,
+            faqs_file=settings.faqs_file,
+            funds_file=settings.funds_file,
+        )
         _funds_cache = _loader.load_funds()
+        logger.info(f"Loaded {len(_funds_cache)} funds into cache")
     return _funds_cache
+
+
+def clear_funds_cache():
+    """Clear the funds cache (useful for reloading data)."""
+    global _funds_cache
+    _funds_cache = None
+    logger.info("Funds cache cleared")
 
 
 @router.get("/funds", response_model=FundListResponse)
@@ -55,7 +68,7 @@ async def list_funds(
         if risk_level:
             filtered = [f for f in filtered if f.risk_level and risk_level.lower() in f.risk_level.lower()]
         
-        # Convert to response model
+        # Convert to response model with metrics
         fund_summaries = [
             FundSummary(
                 id=f.id,
@@ -63,6 +76,11 @@ async def list_funds(
                 fund_house=f.fund_house,
                 category=f.category,
                 risk_level=f.risk_level,
+                cagr_1yr=f.cagr_1yr,
+                cagr_3yr=f.cagr_3yr,
+                cagr_5yr=f.cagr_5yr,
+                sharpe_ratio=f.sharpe_ratio,
+                volatility=f.volatility,
             )
             for f in filtered[:limit]
         ]
@@ -74,7 +92,7 @@ async def list_funds(
         
     except Exception as e:
         logger.error(f"Error listing funds: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve funds")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve funds: {str(e)}")
 
 
 @router.get("/funds/{fund_id}", response_model=FundDetail)
@@ -116,7 +134,7 @@ async def get_fund(fund_id: str) -> FundDetail:
         raise
     except Exception as e:
         logger.error(f"Error getting fund {fund_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve fund")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve fund: {str(e)}")
 
 
 @router.post("/funds/compare", response_model=FundCompareResponse)
@@ -172,7 +190,7 @@ async def compare_funds(request: FundCompareRequest) -> FundCompareResponse:
         raise
     except Exception as e:
         logger.error(f"Error comparing funds: {e}")
-        raise HTTPException(status_code=500, detail="Failed to compare funds")
+        raise HTTPException(status_code=500, detail=f"Failed to compare funds: {str(e)}")
 
 
 @router.get("/funds/summary/metrics")
@@ -184,6 +202,14 @@ async def get_fund_metrics_summary() -> dict:
     """
     try:
         funds = get_funds()
+        
+        if not funds:
+            return {
+                "total_funds": 0,
+                "metrics": {},
+                "categories": [],
+                "risk_levels": [],
+            }
         
         # Calculate summary statistics
         sharpe_ratios = [f.sharpe_ratio for f in funds if f.sharpe_ratio is not None]
@@ -215,4 +241,4 @@ async def get_fund_metrics_summary() -> dict:
         
     except Exception as e:
         logger.error(f"Error getting metrics summary: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get metrics summary")
+        raise HTTPException(status_code=500, detail=f"Failed to get metrics summary: {str(e)}")

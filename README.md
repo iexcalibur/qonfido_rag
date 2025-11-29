@@ -1,254 +1,118 @@
-# 🚀 Qonfido RAG - Financial Intelligence System
+# Qonfido RAG - AI Financial Co-Pilot
 
-A production-ready Retrieval-Augmented Generation (RAG) system for answering financial questions using both textual knowledge (FAQs) and quantitative data (fund performance metrics).
+A Retrieval-Augmented Generation (RAG) system for financial data, built for the Qonfido AI Co-Pilot assignment.
 
-![Architecture](docs/images/architecture.png)
+![Python](https://img.shields.io/badge/Python-3.12+-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green)
+![Next.js](https://img.shields.io/badge/Next.js-16-black)
+![Claude](https://img.shields.io/badge/Claude-API-purple)
 
----
 
-## 📋 Table of Contents
+## 🏗️ Architecture
 
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Minimum Requirements](#minimum-requirements)
-- [Quick Start](#quick-start)
-- [Manual Setup](#manual-setup)
-- [API Documentation](#api-documentation)
-- [Architecture](#architecture)
-- [Evaluation](#evaluation)
-- [Trade-offs & Decisions](#trade-offs--decisions)
-- [Future Improvements](#future-improvements)
-
----
-
-## 🎯 Overview
-
-Qonfido RAG is a **full-stack financial intelligence platform** that combines:
-
-- **Hybrid Search**: Lexical (BM25) + Semantic (Dense Vectors) + Reranking
-- **Intelligent Query Routing**: LangGraph-powered orchestration
-- **Structured Responses**: JSON outputs with source citations
-- **Modern Dashboard**: Next.js 14 with real-time visualizations
-
----
-
-## ✨ Features
-
-### Core RAG Capabilities
-- ✅ Hybrid search (BM25 + Semantic + RRF fusion)
-- ✅ Query classification (FAQ vs Numerical vs Hybrid)
-- ✅ Cohere Rerank for improved accuracy
-- ✅ Structured JSON responses with Instructor
-- ✅ Source attribution and citations
-
-### Dashboard Features
-- ✅ Interactive chat interface
-- ✅ Fund comparison and analytics
-- ✅ Performance visualizations (CAGR, Sharpe, Volatility)
-- ✅ Search mode toggle (Lexical/Semantic/Hybrid)
-- ✅ Query trace viewer
-- ✅ Dark/Light mode
-
-### Production Features
-- ✅ Redis caching (embeddings + queries)
-- ✅ LangFuse observability
-- ✅ Ragas evaluation metrics
-- ✅ Docker Compose deployment
-- ✅ Comprehensive test suite
-
----
-
-## 🛠 Tech Stack
-
-### Backend (Python)
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Python | 3.11+ | Runtime |
-| FastAPI | 0.115.6 | REST API |
-| Pydantic | 2.10.4 | Validation |
-| LangGraph | 0.2.60 | Query Orchestration |
-| BGE-M3 | via FlagEmbedding 1.2.12 | Embeddings |
-| Qdrant | 1.12.1 | Vector Store |
-| Cohere | 5.13.4 | Reranking |
-| Anthropic | 0.40.0 | Claude LLM |
-| Instructor | 1.7.2 | Structured Outputs |
-| PostgreSQL | 16+ | Metadata Storage |
-| Redis | 7.2+ | Caching |
-| LangFuse | 2.57.1 | Observability |
-
-### Frontend (Node.js)
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Node.js | 20.0.0+ | Runtime |
-| Next.js | 14.2.21 | React Framework |
-| TypeScript | 5.7.2 | Type Safety |
-| Tailwind CSS | 3.4.17 | Styling |
-| shadcn/ui | Latest | UI Components |
-| TanStack Query | 5.62.8 | Data Fetching |
-| Recharts | 2.15.0 | Charts |
-| Tremor | 3.18.4 | Dashboard Components |
-
-### Infrastructure
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Docker | 24.0+ | Containerization |
-| Docker Compose | 2.20+ | Orchestration |
-| Qdrant | 1.12.x | Vector Database |
-| Redis | 7.2.x | Cache |
-| PostgreSQL | 16.x | Database |
-
----
-
-## 📦 Minimum Requirements
-
-### System Requirements
-
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| CPU | 4 cores | 8+ cores |
-| RAM | 8 GB | 16+ GB |
-| Disk | 20 GB | 50+ GB SSD |
-| GPU | Not required | NVIDIA GPU (optional, for faster embeddings) |
-
-### Software Requirements
-
-```bash
-# Verify your versions
-python --version    # >= 3.11.0
-node --version      # >= 20.0.0
-npm --version       # >= 10.0.0
-docker --version    # >= 24.0.0
-docker compose version  # >= 2.20.0
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Frontend (Next.js 16)                    │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
+│  │   Home      │  │  AI Chat    │  │    Fund Explorer        │  │
+│  │  (Cosmic)   │  │  (Glass UI) │  │    (Grid + Filters)     │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ REST API
+┌───────────────────────────▼─────────────────────────────────────┐
+│                      FastAPI Backend                             │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                     RAG Pipeline                          │   │
+│  │  ┌─────────┐  ┌───────────┐  ┌─────────┐  ┌───────────┐  │   │
+│  │  │ Embed   │→ │ Retrieve  │→ │ Rerank  │→ │ Generate  │  │   │
+│  │  │ (BGE-M3)│  │ (Hybrid)  │  │(Cohere) │  │ (Claude)  │  │   │
+│  │  └─────────┘  └───────────┘  └─────────┘  └───────────┘  │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│  │ BM25 Index   │  │ ChromaDB     │  │ In-Memory Cache      │   │
+│  │ (Lexical)    │  │ (Semantic)   │  │ (Embeddings+Queries) │   │
+│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### API Keys Required
+## 🛠️ Tech Stack
 
-| Service | Required | Purpose | Get Key |
-|---------|----------|---------|---------|
-| Anthropic | ✅ Yes | Claude LLM | https://console.anthropic.com |
-| Cohere | ✅ Yes | Reranking | https://dashboard.cohere.com |
-| LangFuse | ⚡ Optional | Observability | https://cloud.langfuse.com |
+### Core RAG Components
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Embeddings** | BGE-M3 (sentence-transformers) | 1024-dim dense vectors |
+| **Vector Store** | ChromaDB (in-process) | Semantic similarity search |
+| **Lexical Search** | BM25 (rank-bm25) | Keyword matching |
+| **Hybrid Search** | RRF + Parallel Retrieval | Best of both worlds, 40-50% faster |
+| **Reranking** | Cohere Rerank API | Two-stage retrieval (optional) |
+| **Generation** | Claude API (Anthropic) | Answer generation |
 
----
+### Infrastructure
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Backend** | FastAPI + Python 3.12+ | REST API |
+| **Database** | SQLite (SQLModel ORM) | Metadata storage |
+| **Cache** | In-Memory (TTL-based) | Embedding + Query caching |
+| **Frontend** | Next.js 16 + Tailwind CSS | Modern UI with App Router |
 
 ## 🚀 Quick Start
 
-### Option 1: Docker Compose (Recommended)
+### Prerequisites
+- Python 3.12+ (3.12 recommended)
+- Node.js 20+ (20.0.0+ recommended)
+- npm 10+ (10.0.0+ recommended)
+- Anthropic API Key (required)
+- Cohere API Key (optional, for reranking)
+
+### Backend Setup
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/yourusername/qonfido-rag.git
-cd qonfido-rag
-
-# 2. Copy environment files
-cp .env.example .env
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-
-# 3. Add your API keys to backend/.env
-# ANTHROPIC_API_KEY=sk-ant-...
-# COHERE_API_KEY=...
-
-# 4. Start all services
-docker compose up -d
-
-# 5. Ingest data (first time only)
-docker compose exec backend python scripts/ingest_data.py
-
-# 6. Access the application
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-# API Docs: http://localhost:8000/docs
-# Qdrant Dashboard: http://localhost:6333/dashboard
-```
-
-### Option 2: Quick Start Script
-
-```bash
-# One-command setup
-make setup
-
-# Start development
-make dev
-
-# Run tests
-make test
-```
-
----
-
-## 🔧 Manual Setup
-
-### Step 1: Backend Setup
-
-```bash
-# Navigate to backend
 cd backend
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Setup environment
+# Configure environment
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env and add your ANTHROPIC_API_KEY
 
-# Start PostgreSQL and Redis (if not using Docker)
-# Ensure they're running on default ports
+# Place your CSV files
+cp /path/to/faqs.csv data/raw/
+cp /path/to/funds.csv data/raw/
 
-# Run database migrations
-alembic upgrade head
-
-# Ingest data
-python scripts/ingest_data.py
-
-# Start backend server
+# Run the server
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Step 2: Frontend Setup
+### Frontend Setup
 
 ```bash
-# Navigate to frontend
 cd frontend
 
 # Install dependencies
 npm install
 
-# Setup environment
+# Configure environment
 cp .env.example .env.local
-# Edit .env.local with backend URL
 
-# Start development server
+# Run development server
 npm run dev
-
-# Access at http://localhost:3000
 ```
 
-### Step 3: Start Infrastructure Services
+### Access the Application
+- **Frontend**: http://localhost:3000
+- **API Docs**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/api/v1/health
 
+## 📡 API Endpoints
+
+### Query Endpoint
 ```bash
-# Using Docker for just infrastructure
-docker compose up -d qdrant redis postgres
-
-# Or install locally:
-# - Qdrant: https://qdrant.tech/documentation/quick-start/
-# - Redis: https://redis.io/docs/getting-started/
-# - PostgreSQL: https://www.postgresql.org/download/
-```
-
----
-
-## 📚 API Documentation
-
-### Core Endpoints
-
-#### Query Endpoint
-```http
 POST /api/v1/query
 Content-Type: application/json
 
@@ -260,196 +124,284 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
+### Response
 ```json
 {
-  "answer": "Based on the fund performance data...",
-  "sources": [
+  "answer": "Based on the fund data, the top funds by Sharpe ratio are...",
+  "query_type": "numerical",
+  "funds": [
     {
-      "type": "fund",
       "fund_name": "Axis Bluechip Fund",
-      "relevance_score": 0.92,
-      "metrics": {
-        "sharpe_ratio": 1.45,
-        "cagr_3yr": 12.5
-      }
+      "sharpe_ratio": 1.85,
+      "cagr_3yr": 15.2,
+      "risk_level": "Moderate"
     }
   ],
-  "query_type": "numerical",
-  "confidence": 0.89,
-  "trace_id": "abc123"
+  "sources": [...],
+  "confidence": 0.85,
+  "search_mode": "hybrid"
 }
 ```
 
-#### Fund Endpoints
-```http
-GET /api/v1/funds                    # List all funds
-GET /api/v1/funds/{fund_id}          # Get fund details
-GET /api/v1/funds/compare?ids=1,2,3  # Compare funds
-GET /api/v1/funds/summary            # Analytics summary
-```
-
-#### Health Check
-```http
-GET /api/v1/health
-```
-
-**Full API documentation available at:** `http://localhost:8000/docs`
-
----
-
-## 🏗 Architecture
-
-### High-Level Flow
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Next.js Dashboard                           │
-│  [Chat Interface] [Fund Explorer] [Comparison] [Traces]         │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │ HTTP/REST
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      FastAPI Backend                            │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │              LangGraph Query Router                      │    │
-│  │  [Classify Query] → [Route] → [Retrieve] → [Generate]   │    │
-│  └─────────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌───────────────┐  ┌───────────────┐  ┌───────────────────┐    │
-│  │   Retrieval   │  │   Generation  │  │   Observability   │    │
-│  │   ─────────   │  │   ──────────  │  │   ─────────────   │    │
-│  │   BGE-M3      │  │   Claude API  │  │   LangFuse        │    │
-│  │   Qdrant      │  │   Instructor  │  │   Tracing         │    │
-│  │   BM25        │  │               │  │                   │    │
-│  │   Cohere      │  │               │  │                   │    │
-│  └───────────────┘  └───────────────┘  └───────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        ▼                     ▼                     ▼
-┌───────────────┐    ┌───────────────┐    ┌───────────────┐
-│    Qdrant     │    │  PostgreSQL   │    │    Redis      │
-│   (Vectors)   │    │  (Metadata)   │    │   (Cache)     │
-└───────────────┘    └───────────────┘    └───────────────┘
-```
-
-### Query Classification Strategy
-
-| Query Type | Example | Retrieval Strategy |
-|------------|---------|-------------------|
-| FAQ | "What is an index fund?" | Semantic search on FAQs |
-| Numerical | "Best Sharpe ratio funds" | Metadata filter + semantic |
-| Hybrid | "Low risk funds with good returns explained" | Both sources + RRF |
-
-### Hybrid Search: RRF (Reciprocal Rank Fusion)
-
-```
-Final_Score = Σ (1 / (k + rank_i))
-
-Where:
-- k = 60 (constant)
-- rank_i = position in each result list
-```
-
----
+### Other Endpoints
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/health` | GET | Health check |
+| `/api/v1/funds` | GET | List all funds |
+| `/api/v1/funds/{id}` | GET | Fund details |
+| `/api/v1/search-modes` | GET | Available search modes |
 
 ## 📊 Evaluation
 
-### Ragas Metrics
+Run the evaluation script to measure RAG quality:
 
-| Metric | Score | Description |
-|--------|-------|-------------|
-| Faithfulness | 0.XX | Answer grounded in sources |
-| Answer Relevancy | 0.XX | Answer addresses query |
-| Context Precision | 0.XX | Retrieved docs are relevant |
-| Context Recall | 0.XX | All relevant docs retrieved |
-
-### Test Query Results
-
-| Query Type | Precision@3 | Latency (p50) | Latency (p99) |
-|------------|-------------|---------------|---------------|
-| FAQ | 0.XX | XXms | XXms |
-| Numerical | 0.XX | XXms | XXms |
-| Hybrid | 0.XX | XXms | XXms |
-
-Run evaluation:
 ```bash
 cd backend
-python scripts/evaluate.py
+
+# Evaluate hybrid search (default)
+python -m scripts.evaluate
+
+# Compare all modes
+python -m scripts.evaluate --mode all --verbose
+
+# Save results to file
+python -m scripts.evaluate --output results.json
 ```
 
----
+### Evaluation Metrics
+- **Pass Rate**: % of queries with acceptable answers
+- **Keyword Coverage**: Expected terms found in answer
+- **Source Quality**: Correct source type retrieved
+- **Type Accuracy**: Query type classification accuracy
+- **Latency**: Response time per query
 
-## ⚖️ Trade-offs & Decisions
+## 📁 Project Structure
 
-### Why BGE-M3 over OpenAI Embeddings?
-- **Pros**: Multi-vector (dense + sparse), self-hosted, no API costs
-- **Cons**: Requires more compute, larger model size
-- **Decision**: Better long-term scalability and hybrid search native support
+```
+qonfido-rag/
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py                    # FastAPI application entry point
+│   │   ├── config.py                  # Configuration management
+│   │   │
+│   │   ├── api/                       # REST API Layer
+│   │   │   ├── __init__.py
+│   │   │   ├── schemas/               # Pydantic request/response models
+│   │   │   │   ├── common.py          # Shared schemas (Health, Pagination)
+│   │   │   │   ├── fund.py            # Fund-related schemas
+│   │   │   │   └── query.py           # Query request/response schemas
+│   │   │   └── v1/                    # API version 1
+│   │   │       ├── router.py          # Main API router
+│   │   │       ├── query.py           # Main RAG query endpoint
+│   │   │       ├── funds.py           # Fund explorer endpoints
+│   │   │       └── health.py          # Health check endpoint
+│   │   │
+│   │   ├── core/                      # Core Business Logic
+│   │   │   ├── ingestion/             # Data Ingestion & Processing
+│   │   │   │   ├── loader.py          # CSV data loading (FAQs, Funds)
+│   │   │   │   └── embedder.py        # Embedding generation (BGE-M3)
+│   │   │   ├── retrieval/             # Search & Retrieval
+│   │   │   │   ├── lexical.py         # BM25 keyword search
+│   │   │   │   ├── semantic.py        # ChromaDB vector search
+│   │   │   │   ├── hybrid.py          # Hybrid search (RRF + Parallel)
+│   │   │   │   └── reranker.py        # Cohere reranking
+│   │   │   ├── generation/            # LLM Response Generation
+│   │   │   │   ├── llm.py             # Claude API integration
+│   │   │   │   └── prompts.py         # Prompt templates
+│   │   │   └── orchestration/         # RAG Pipeline Orchestration
+│   │   │       └── pipeline.py        # Main RAG pipeline coordinator
+│   │   │
+│   │   ├── db/                        # Database Layer
+│   │   │   ├── models.py              # SQLModel database models
+│   │   │   ├── repositories.py        # Data access layer
+│   │   │   └── session.py             # Database connection management
+│   │   │
+│   │   ├── services/                  # External Service Integrations
+│   │   │   ├── cache.py               # In-memory caching service
+│   │   │   └── vector_store.py        # Vector store wrapper
+│   │   │
+│   │   └── utils/                     # Utility Functions
+│   │       ├── helpers.py             # Common utility functions
+│   │       └── logging.py             # Logging configuration
+│   │
+│   ├── data/
+│   │   ├── raw/                       # Raw CSV files
+│   │   │   ├── faqs.csv               # Mutual fund FAQs
+│   │   │   └── funds.csv              # Fund performance data
+│   │   └── processed/                 # Processed data (if any)
+│   │
+│   ├── scripts/                       # Utility Scripts
+│   │   ├── ingest_data.py             # Data ingestion script
+│   │   ├── seed_db.py                 # Database seeding
+│   │   ├── evaluate.py                # RAG evaluation script
+│   │   └── test_query.py              # Query testing script
+│   │
+│   ├── tests/                         # Test Suite
+│   │   ├── unit/                      # Unit tests
+│   │   ├── integration/               # Integration tests
+│   │   └── evaluation/                # Evaluation tests
+│   │
+│   ├── requirements.txt               # Python dependencies
+│   ├── test_backend.py                # Backend test runner
+│   └── venv/                          # Virtual environment (gitignored)
+│
+├── frontend/
+│   ├── src/
+│   │   ├── app/                       # Next.js App Router (Pages)
+│   │   │   ├── layout.tsx             # Root layout component
+│   │   │   ├── page.tsx               # Homepage (Landing page)
+│   │   │   ├── globals.css            # Global styles
+│   │   │   ├── chat/
+│   │   │   │   └── page.tsx           # Chat interface page
+│   │   │   └── funds/
+│   │   │       ├── page.tsx           # Fund Explorer (list)
+│   │   │       └── [fundId]/
+│   │   │           └── page.tsx       # Fund detail page
+│   │   │
+│   │   ├── components/                # React Components
+│   │   │   ├── Header.tsx             # Main navigation header
+│   │   │   ├── chat/                  # Chat-related components
+│   │   │   │   ├── ChatInput.tsx      # Chat input with search mode
+│   │   │   │   ├── ChatMessage.tsx    # Individual chat message
+│   │   │   │   ├── CitationChip.tsx   # Source citation badge
+│   │   │   │   ├── FundAnalysisResults.tsx  # Fund metrics grid
+│   │   │   │   ├── FundInsightCard.tsx      # Individual fund card
+│   │   │   │   ├── FundMetricsUtils.ts      # Metric utility functions
+│   │   │   │   ├── MetricCard.tsx     # Generic metric card
+│   │   │   │   ├── WelcomeMessage.tsx # Welcome screen
+│   │   │   │   └── index.ts           # Component exports
+│   │   │   └── layout/                # Layout components
+│   │   │       ├── ConditionalLayout.tsx  # Conditional layout wrapper
+│   │   │       ├── Header.tsx         # Alternative header
+│   │   │       ├── Sidebar.tsx        # Sidebar navigation
+│   │   │       └── index.ts           # Component exports
+│   │   │
+│   │   ├── lib/                       # Utility Libraries
+│   │   │   ├── api.ts                 # API client functions
+│   │   │   └── utils.ts               # Utility functions
+│   │   │
+│   │   ├── types/                     # TypeScript Type Definitions
+│   │   │   └── index.ts               # All type definitions
+│   │   │
+│   │   └── hooks/                     # Custom React Hooks
+│   │       └── index.ts               # Custom hooks (useChat, useFunds, etc.)
+│   │
+│   ├── package.json                   # Dependencies & scripts
+│   ├── tsconfig.json                  # TypeScript configuration
+│   ├── tailwind.config.ts             # Tailwind CSS configuration
+│   ├── next.config.js                 # Next.js configuration
+│   ├── postcss.config.js              # PostCSS configuration
+│   └── next-env.d.ts                  # Next.js TypeScript declarations
+│
+├── docs/                              # Documentation
+│   ├── BACKEND_DOCUMENTATION.md       # Detailed backend file documentation
+│   ├── FRONTEND_DOCUMENTATION.md      # Detailed frontend file documentation
+│   ├── BACKEND_ANALYSIS.md            # Backend implementation analysis
+│   ├── PROJECT_OBJECTIVE.md           # Project objectives
+│   ├── PROJECT_STRUCTURE.md           # Project structure documentation
+│   └── ARCHITECTURE_MAPPING.md        # Architecture mapping
+│
+├── evaluation/
+│   └── results/                       # Evaluation results
+│
+├── infra/                             # Infrastructure
+│   ├── docker/                        # Docker configurations
+│   └── scripts/                       # Infrastructure scripts
+│
+├── docker-compose.yml                 # Docker Compose configuration
+├── Makefile                           # Make commands
+├── package.json                       # Root package.json
+├── start.sh                           # Startup script
+├── start.ps1                          # PowerShell startup script
+└── README.md                          # This file
+```
 
-### Why Qdrant over Pinecone/ChromaDB?
-- **Pros**: Native hybrid search, self-hosted, excellent filtering
-- **Cons**: More infrastructure to manage
-- **Decision**: Production-ready features and no vendor lock-in
+## ⚙️ Configuration
 
-### Why LangGraph over basic chains?
-- **Pros**: Complex routing, state management, easier debugging
-- **Cons**: Learning curve, more code
-- **Decision**: Better query classification and future extensibility
+### Environment Variables
 
-### Why Cohere Rerank?
-- **Pros**: Significant accuracy improvement (10-15%), fast
-- **Cons**: API dependency, cost
-- **Decision**: Worth the cost for financial domain accuracy
+```env
+# Required
+ANTHROPIC_API_KEY=sk-ant-...
 
----
+# Optional
+COHERE_API_KEY=...           # For reranking (optional)
+EMBEDDING_MODEL=BAAI/bge-m3  # Default embedding model
+CLAUDE_MODEL=claude-3-opus-20240229  # Claude model for generation
+DATA_DIR=data
+FAQS_FILE=faqs.csv
+FUNDS_FILE=funds.csv
+```
 
-## 🔮 Future Improvements
+## 🔧 Key Features
 
-With more time, I would add:
+### 1. Flexible Data Loading
+- Handles different CSV column names automatically
+- Converts numerical metrics to searchable text
+- Supports missing data gracefully
 
-1. **Fine-tuned Embeddings**: Train on financial corpus for better retrieval
-2. **Cross-Encoder Reranking**: Replace Cohere with self-hosted model
-3. **Streaming Responses**: Real-time generation with SSE
-4. **Multi-turn Conversations**: Context-aware follow-up queries
-5. **User Feedback Loop**: Learn from thumbs up/down
-6. **A/B Testing**: Compare retrieval strategies
-7. **Kubernetes Deployment**: Production-ready scaling
+### 2. Hybrid Search with Parallel Retrieval
+- BM25 for exact keyword matching
+- ChromaDB for semantic similarity
+- RRF fusion for optimal ranking
+- **40-50% faster** with parallel execution
 
----
+### 3. Multi-Level Caching
+- **Embedding Cache**: Avoids recomputing embeddings (24hr TTL)
+- **Query Cache**: Instant response for repeated queries (5min TTL)
+- Hash-based keys for efficient lookup
 
-## 🤝 Contributing
+### 4. Production-Ready API
+- Comprehensive error handling
+- Request validation with Pydantic
+- OpenAPI documentation
+- Health checks
+
+## 📈 Performance
+
+| Metric | Value |
+|--------|-------|
+| First Query | ~2-4s (includes LLM) |
+| Cached Query | ~50ms |
+| Embedding Cache Hit | ~10ms |
+| Parallel vs Sequential | ~40% faster |
+
+## 🧪 Testing
 
 ```bash
-# Install pre-commit hooks
-pre-commit install
+cd backend
 
-# Run tests before committing
-make test
+# Run evaluation
+python -m scripts.evaluate --verbose
 
-# Format code
-make format
+# Compare all search modes
+python -m scripts.evaluate --mode all
+
+# Test specific query
+python -m scripts.test_query "What is a mutual fund?"
 ```
 
----
+## 📝 What I Learned
+
+### RAG Best Practices
+1. **Hybrid search** (BM25 + semantic) consistently outperforms either alone
+2. **RRF fusion** is simple but effective for combining ranked lists
+3. **Parallel retrieval** is an easy win for latency
+4. **Caching embeddings** is essential for production
+
+### Technical Decisions
+- **ChromaDB** over Qdrant: Simpler setup, good for MVP
+- **In-memory cache** over Redis: Good for development, easy to migrate later
+- **SQLite** over PostgreSQL: Zero config, sufficient for this scale
 
 ## 📄 License
 
-MIT License - See [LICENSE](LICENSE) for details.
-
----
-
-## 👤 Author
-
-**Shubham**
-- Role: Founding ML/AI Engineer Candidate
-- Assignment: Qonfido Mini RAG Challenge
-
----
+This project was created for the Qonfido AI Co-Pilot assignment.
 
 ## 🙏 Acknowledgments
 
-- Qonfido team for the interesting challenge
-- Open source community for amazing tools
+- [Anthropic](https://anthropic.com) - Claude API
+- [Cohere](https://cohere.com) - Reranking API
+- [ChromaDB](https://trychroma.com) - Vector Store
+- [Sentence Transformers](https://sbert.net) - Embeddings

@@ -9,6 +9,8 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +44,17 @@ class Reranker:
     ):
         self.model = model
         self._client = None
-        self._api_key = api_key or os.getenv("COHERE_API_KEY")
+        # Try: provided key -> settings config -> env var (if available)
+        try:
+            settings_key = settings.cohere_api_key.get_secret_value() if settings.cohere_api_key else None
+        except Exception:
+            settings_key = None
+        
+        self._api_key = (
+            api_key 
+            or settings_key
+            or os.getenv("COHERE_API_KEY")
+        )
 
     @property
     def client(self):

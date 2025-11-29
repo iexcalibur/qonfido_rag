@@ -8,13 +8,20 @@ from pydantic import BaseModel, Field
 
 
 class FundSummary(BaseModel):
-    """Summary of a mutual fund."""
+    """Summary of a mutual fund (includes key metrics for list display)."""
     
     id: str = Field(..., description="Fund ID")
     fund_name: str = Field(..., description="Name of the fund")
     fund_house: str | None = Field(None, description="Fund house/AMC")
     category: str | None = Field(None, description="Fund category")
     risk_level: str | None = Field(None, description="Risk level")
+    
+    # Key metrics for list display
+    cagr_1yr: float | None = Field(None, description="1-year CAGR (%)")
+    cagr_3yr: float | None = Field(None, description="3-year CAGR (%)")
+    cagr_5yr: float | None = Field(None, description="5-year CAGR (%)")
+    sharpe_ratio: float | None = Field(None, description="Sharpe ratio")
+    volatility: float | None = Field(None, description="Volatility (%)")
 
 
 class FundDetail(BaseModel):

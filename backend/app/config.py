@@ -5,17 +5,22 @@ Centralized configuration using Pydantic Settings.
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Get the backend directory (parent of app/)
+BACKEND_DIR = Path(__file__).parent.parent
+ENV_FILE = BACKEND_DIR / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(ENV_FILE) if ENV_FILE.exists() else ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -50,8 +55,8 @@ class Settings(BaseSettings):
     # LLM - Claude
     # =========================================================================
     claude_model: str = Field(
-        "claude-sonnet-4-5-20250514",
-        description="Claude model to use",
+        "claude-3-opus-20240229",
+        description="Claude model to use. Valid models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307",
     )
     claude_max_tokens: int = Field(1024, description="Max tokens for Claude response")
     claude_temperature: float = Field(0.3, description="Temperature for Claude")
@@ -74,15 +79,6 @@ class Settings(BaseSettings):
     rrf_k: int = Field(60, description="RRF constant for rank fusion")
 
     # =========================================================================
-    # Database (Optional - for query logs, feedback, etc.)
-    # =========================================================================
-    database_url: str | None = Field(
-        None,
-        description="PostgreSQL database URL (optional). "
-        "Format: postgresql+asyncpg://user:pass@host:port/dbname",
-    )
-
-    # =========================================================================
     # Vector Store - ChromaDB (Simple, no server needed)
     # =========================================================================
     chroma_collection_name: str = Field("qonfido_funds", description="ChromaDB collection name")
@@ -91,20 +87,20 @@ class Settings(BaseSettings):
     # =========================================================================
     # Data Paths
     # =========================================================================
-    data_dir: str = Field("data", description="Data directory path")
-    faqs_file: str = Field("mutual_fund_faqs.csv", description="FAQs CSV filename")
-    funds_file: str = Field("fund_performance.csv", description="Fund performance CSV filename")
+    data_dir: str = Field("data/raw", description="Data directory containing CSV files")
+    faqs_file: str = Field("faqs.csv", description="FAQs CSV filename")
+    funds_file: str = Field("funds.csv", description="Fund performance CSV filename")
 
     # =========================================================================
     # Computed Properties
     # =========================================================================
     @property
     def faqs_path(self) -> str:
-        return f"{self.data_dir}/raw/{self.faqs_file}"
+        return f"{self.data_dir}/{self.faqs_file}"
 
     @property
     def funds_path(self) -> str:
-        return f"{self.data_dir}/raw/{self.funds_file}"
+        return f"{self.data_dir}/{self.funds_file}"
 
     @property
     def is_development(self) -> bool:

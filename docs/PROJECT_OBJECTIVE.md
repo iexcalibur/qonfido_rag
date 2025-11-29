@@ -25,8 +25,8 @@ Build a **Retrieval-Augmented Generation (RAG) pipeline** that can answer financ
 
 | Dataset | Description | Source |
 |---------|-------------|--------|
-| `mutual_fund_faqs.csv` | Frequently asked questions about mutual funds | Provided |
-| `fund_performance.csv` | Mutual fund performance metrics (CAGR, Sharpe, etc.) | Provided |
+| `faqs.csv` | Frequently asked questions about mutual funds | Provided |
+| `fund.csv` | Mutual fund performance metrics (CAGR, Sharpe, etc.) | Provided |
 
 ---
 
@@ -72,7 +72,6 @@ Build a **Retrieval-Augmented Generation (RAG) pipeline** that can answer financ
 | Reranking | [ ] | Use Cohere Rerank for improved accuracy |
 | Query Classification | [ ] | Route queries to appropriate retrieval strategy |
 | Next.js Dashboard | [ ] | Full-stack UI for demo |
-| Observability | [ ] | LangFuse tracing for debugging |
 | Evaluation | [ ] | Ragas metrics for RAG quality |
 
 ---
@@ -93,7 +92,6 @@ Optional caching             →    Redis caching layer
 -                            →    LangGraph query orchestration
 -                            →    Cohere reranking
 -                            →    Next.js dashboard
--                            →    LangFuse observability
 -                            →    Ragas evaluation
 -                            →    Docker deployment
 ```

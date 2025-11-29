@@ -28,8 +28,6 @@ services:
       # API Keys - Set in .env file
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - COHERE_API_KEY=${COHERE_API_KEY}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
     volumes:
       - ./backend:/app
       - backend_cache:/root/.cache
@@ -139,19 +137,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ===========================================================================
-  # LangFuse - Observability (Optional)
-  # ===========================================================================
-  # Uncomment to run self-hosted LangFuse
-  # langfuse:
-  #   image: langfuse/langfuse:latest
-  #   container_name: qonfido-langfuse
-  #   restart: unless-stopped
-  #   ports:
-  #     - "3001:3000"
-  #   environment:
-  #     - DATABASE_URL=postgresql://qonfido:qonfido_secret@postgres:5432/langfuse_db
-  #     - NEXTAUTH_SECRET=your-secret-key
   #     - NEXTAUTH_URL=http://localhost:3001
   #   depends_on:
   #     - postgres

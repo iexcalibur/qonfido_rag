@@ -3,7 +3,7 @@
 # Convenience commands for development and deployment
 # =============================================================================
 
-.PHONY: help setup dev test lint format clean docker-up docker-down ingest
+.PHONY: help setup dev backend frontend test lint format clean docker-up docker-down ingest
 
 # Default target
 help:
@@ -75,15 +75,27 @@ setup-env:
 
 dev:
 	@echo "🚀 Starting development servers..."
-	@make -j2 backend frontend
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "  ✓ Backend API:     http://localhost:8000"
+	@echo "  ✓ API Docs:        http://localhost:8000/docs"
+	@echo "  ✓ Frontend:        http://localhost:3000"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "Press Ctrl+C to stop all servers"
+	@echo ""
+	@bash -c 'trap "kill 0" EXIT; \
+		(cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8000) & \
+		(cd frontend && npm run dev) & \
+		wait'
 
 backend:
 	@echo "🐍 Starting backend..."
-	cd backend && . venv/bin/activate && uvicorn app.main:app --reload --port 8000
+	@cd backend && bash -c 'source venv/bin/activate && uvicorn app.main:app --reload --port 8000'
 
 frontend:
 	@echo "⚛️  Starting frontend..."
-	cd frontend && npm run dev
+	@cd frontend && npm run dev
 
 # =============================================================================
 # Docker

@@ -10,6 +10,8 @@ from typing import Any
 
 from anthropic import Anthropic
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,14 +23,24 @@ class LLMGenerator:
     def __init__(
         self,
         api_key: str | None = None,
-        model: str = "claude-sonnet-4-5-20250514",
+        model: str = "claude-3-opus-20240229",
         max_tokens: int = 1024,
         temperature: float = 0.3,
     ):
         self.model = model
         self.max_tokens = max_tokens
         self.temperature = temperature
-        self._api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        # Try: provided key -> settings config -> env var
+        try:
+            settings_key = settings.anthropic_api_key.get_secret_value()
+        except Exception:
+            settings_key = None
+        
+        self._api_key = (
+            api_key 
+            or settings_key
+            or os.getenv("ANTHROPIC_API_KEY")
+        )
         self._client = None
 
     @property
@@ -150,5 +162,9 @@ def get_generator(**kwargs) -> LLMGenerator:
     """Get or create the global generator instance."""
     global _generator
     if _generator is None:
+        # Use settings if not provided in kwargs
+        kwargs.setdefault("model", settings.claude_model)
+        kwargs.setdefault("max_tokens", settings.claude_max_tokens)
+        kwargs.setdefault("temperature", settings.claude_temperature)
         _generator = LLMGenerator(**kwargs)
     return _generator

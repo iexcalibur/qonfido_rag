@@ -76,7 +76,6 @@ qonfido-rag/
 │   │   │   ├── 📄 __init__.py
 │   │   │   ├── 📄 vector_store.py        # Qdrant service
 │   │   │   ├── 📄 cache.py               # Redis cache service
-│   │   │   └── 📄 tracing.py             # LangFuse tracing
 │   │   │
 │   │   └── 📁 utils/                     # Utilities
 │   │       ├── 📄 __init__.py
@@ -139,7 +138,6 @@ qonfido-rag/
 │   │   │   │       └── 📄 page.tsx
 │   │   │   ├── 📁 compare/               # Fund comparison
 │   │   │   │   └── 📄 page.tsx
-│   │   │   └── 📁 traces/                # Query traces (LangFuse)
 │   │   │       └── 📄 page.tsx
 │   │   │
 │   │   ├── 📁 components/                # React Components
@@ -228,7 +226,7 @@ qonfido-rag/
 - **app/api**: REST API endpoints and request/response schemas
 - **app/core**: Core business logic (ingestion, retrieval, generation, orchestration)
 - **app/db**: Database models and data access
-- **app/services**: External service integrations (Qdrant, Redis, LangFuse)
+- **app/services**: External service integrations (ChromaDB, Redis, Cache)
 - **scripts**: CLI tools for data ingestion and evaluation
 - **tests**: Comprehensive test suite
 

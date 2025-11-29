@@ -2,6 +2,12 @@
 Qonfido RAG - Pipeline
 =======================
 Main RAG pipeline that orchestrates ingestion, retrieval, and generation.
+
+Features:
+- Query caching for repeated queries
+- Embedding caching for efficiency
+- Parallel hybrid retrieval
+- Optional reranking with Cohere
 """
 
 import logging
@@ -13,6 +19,7 @@ from app.api.schemas import (
     SearchMode,
     SourceDocument,
 )
+from app.config import settings
 from app.core.generation import get_generator
 from app.core.ingestion import DataLoader, get_embedder
 from app.core.retrieval import (
@@ -29,27 +36,41 @@ class RAGPipeline:
     """
     Main RAG pipeline orchestrating:
     1. Data ingestion and indexing
-    2. Query embedding
-    3. Retrieval (lexical/semantic/hybrid)
+    2. Query embedding (with caching)
+    3. Retrieval (lexical/semantic/hybrid with parallel execution)
     4. Reranking (optional)
     5. Response generation
+    6. Query result caching
     """
 
     def __init__(
         self,
-        data_dir: str = "data/raw",
+        data_dir: str | None = None,
         use_reranker: bool = True,
+        use_query_cache: bool = True,
     ):
-        self.data_dir = data_dir
+        # Use settings if not provided (settings.data_dir already includes 'raw')
+        self.data_dir = data_dir or settings.data_dir
         self.use_reranker = use_reranker
+        self.use_query_cache = use_query_cache
         self._initialized = False
         
-        # Components
-        self.embedder = get_embedder()
+        # Components (lazy loaded) - enable caching and parallel
+        self.embedder = get_embedder(use_cache=True)
         self.lexical_searcher = get_lexical_searcher()
         self.semantic_searcher = get_semantic_searcher()
-        self.hybrid_searcher = get_hybrid_searcher()
+        self.hybrid_searcher = get_hybrid_searcher(use_parallel=True)
         self.generator = get_generator()
+        
+        # Query cache
+        self._query_cache = None
+        if use_query_cache:
+            try:
+                from app.services.cache import get_query_cache
+                self._query_cache = get_query_cache()
+                logger.info("Query cache enabled")
+            except Exception as e:
+                logger.warning(f"Query cache not available: {e}")
         
         # Try to get reranker (may fail if no API key)
         try:
@@ -58,15 +79,36 @@ class RAGPipeline:
             logger.warning(f"Reranker not available: {e}")
             self.reranker = None
 
-    def initialize(self) -> None:
-        """Initialize the pipeline by loading and indexing data."""
+    def initialize(self, clear_existing: bool = True) -> None:
+        """
+        Initialize the pipeline by loading and indexing data.
+        
+        Args:
+            clear_existing: If True, clears existing indexes before loading new data.
+                          This ensures CSV changes are reflected on restart.
+        """
         if self._initialized:
             return
 
         logger.info("Initializing RAG pipeline...")
         
-        # Load data
-        loader = DataLoader(self.data_dir)
+        # Clear existing indexes to ensure fresh data from CSV
+        if clear_existing:
+            logger.info("Clearing existing indexes to load fresh data from CSV...")
+            try:
+                self.lexical_searcher.clear()
+                self.semantic_searcher.clear()
+                logger.info("✓ Cleared existing indexes")
+            except Exception as e:
+                logger.warning(f"⚠ Failed to clear some indexes: {e}")
+                # Continue anyway - may not have existed
+        
+        # Load data using config settings (fresh from CSV files)
+        loader = DataLoader(
+            data_dir=self.data_dir,
+            faqs_file=settings.faqs_file,
+            funds_file=settings.funds_file,
+        )
         documents = loader.get_all_documents()
         
         if not documents:
@@ -74,7 +116,9 @@ class RAGPipeline:
             self._initialized = True
             return
 
-        # Generate embeddings
+        logger.info(f"Loaded {len(documents)} documents from CSV files")
+        
+        # Generate embeddings (with caching)
         texts = [doc["text"] for doc in documents]
         embeddings = self.embedder.embed_texts(texts)
         
@@ -86,6 +130,11 @@ class RAGPipeline:
         
         self._initialized = True
         logger.info(f"Pipeline initialized with {len(documents)} documents")
+        
+        # Log cache stats
+        if hasattr(self.embedder, 'cache_stats'):
+            stats = self.embedder.cache_stats
+            logger.info(f"Embedding cache: {stats.get('size', 0)} entries")
 
     async def process(
         self,
@@ -108,11 +157,23 @@ class RAGPipeline:
         Returns:
             QueryResponse with answer and sources
         """
+        # Check query cache first
+        if self._query_cache and self.use_query_cache:
+            cached = self._query_cache.get(
+                query=query,
+                search_mode=search_mode.value,
+                top_k=top_k,
+                source_filter=source_filter,
+            )
+            if cached:
+                logger.info("Query cache hit!")
+                return QueryResponse(**cached)
+        
         # Ensure initialized
         if not self._initialized:
             self.initialize()
 
-        # Embed query
+        # Embed query (with caching)
         query_embedding = self.embedder.embed_query(query)
         
         # Retrieve documents based on mode
@@ -128,7 +189,7 @@ class RAGPipeline:
                 top_k=top_k,
                 source_filter=source_filter,
             )
-        else:  # HYBRID
+        else:  # HYBRID (with parallel retrieval)
             results = self.hybrid_searcher.search(
                 query=query,
                 query_embedding=query_embedding,
@@ -184,7 +245,7 @@ class RAGPipeline:
         # Calculate confidence
         confidence = self._calculate_confidence(results)
 
-        return QueryResponse(
+        response = QueryResponse(
             answer=answer,
             query_type=query_type,
             funds=funds,
@@ -192,6 +253,18 @@ class RAGPipeline:
             confidence=confidence,
             search_mode=search_mode,
         )
+        
+        # Cache the response
+        if self._query_cache and self.use_query_cache:
+            self._query_cache.set(
+                query=query,
+                search_mode=search_mode.value,
+                top_k=top_k,
+                result=response.model_dump(),
+                source_filter=source_filter,
+            )
+
+        return response
 
     def _classify_query(self, query: str, results: list) -> str:
         """Classify the query type based on content and results."""
@@ -226,9 +299,34 @@ class RAGPipeline:
         return "hybrid"
 
     def _extract_fund_info(self, results: list) -> list[FundInfo]:
-        """Extract fund information from results."""
+        """Extract fund information from results, with fallback to funds cache."""
+        from app.api.v1.funds import get_funds
+        
+        def _to_float(value) -> float | None:
+            """Convert value to float, handling None and string cases."""
+            if value is None:
+                return None
+            if isinstance(value, (int, float)):
+                return float(value)
+            if isinstance(value, str):
+                try:
+                    return float(value)
+                except (ValueError, TypeError):
+                    return None
+            return None
+        
         funds = []
         seen_names = set()
+        
+        # Get full fund data from cache for fallback (by name and ID)
+        try:
+            all_funds = get_funds()
+            funds_by_name = {f.fund_name: f for f in all_funds}
+            funds_by_id = {f.id: f for f in all_funds}
+        except Exception as e:
+            logger.warning(f"Could not load funds cache for fallback: {e}")
+            funds_by_name = {}
+            funds_by_id = {}
         
         for r in results:
             if r.source != "fund":
@@ -236,25 +334,41 @@ class RAGPipeline:
             
             metadata = r.metadata
             fund_name = metadata.get("fund_name")
+            fund_id = metadata.get("id")
             
             if not fund_name or fund_name in seen_names:
                 continue
             
             seen_names.add(fund_name)
             
-            funds.append(
-                FundInfo(
-                    fund_name=fund_name,
-                    fund_house=metadata.get("fund_house"),
-                    category=metadata.get("category"),
-                    cagr_1yr=metadata.get("cagr_1yr"),
-                    cagr_3yr=metadata.get("cagr_3yr"),
-                    cagr_5yr=metadata.get("cagr_5yr"),
-                    sharpe_ratio=metadata.get("sharpe_ratio"),
-                    volatility=metadata.get("volatility"),
-                    risk_level=metadata.get("risk_level"),
-                )
+            # Try to get full fund data from cache (prefer by ID, fallback to name)
+            cached_fund = None
+            if fund_id and fund_id in funds_by_id:
+                cached_fund = funds_by_id[fund_id]
+            elif fund_name in funds_by_name:
+                cached_fund = funds_by_name[fund_name]
+            
+            # Extract and convert numeric values from metadata
+            cagr_1yr = _to_float(metadata.get("cagr_1yr"))
+            cagr_3yr = _to_float(metadata.get("cagr_3yr"))
+            cagr_5yr = _to_float(metadata.get("cagr_5yr"))
+            sharpe_ratio = _to_float(metadata.get("sharpe_ratio"))
+            volatility = _to_float(metadata.get("volatility"))
+            
+            # Use metadata first, but fallback to cached fund data if metadata values are missing
+            fund_info = FundInfo(
+                fund_name=fund_name,
+                fund_house=metadata.get("fund_house") or (cached_fund.fund_house if cached_fund else None),
+                category=metadata.get("category") or (cached_fund.category if cached_fund else None),
+                cagr_1yr=cagr_1yr if cagr_1yr is not None else (cached_fund.cagr_1yr if cached_fund else None),
+                cagr_3yr=cagr_3yr if cagr_3yr is not None else (cached_fund.cagr_3yr if cached_fund else None),
+                cagr_5yr=cagr_5yr if cagr_5yr is not None else (cached_fund.cagr_5yr if cached_fund else None),
+                sharpe_ratio=sharpe_ratio if sharpe_ratio is not None else (cached_fund.sharpe_ratio if cached_fund else None),
+                volatility=volatility if volatility is not None else (cached_fund.volatility if cached_fund else None),
+                risk_level=metadata.get("risk_level") or (cached_fund.risk_level if cached_fund else None),
             )
+            
+            funds.append(fund_info)
         
         return funds[:5]  # Limit to top 5 funds
 
@@ -277,6 +391,17 @@ class RAGPipeline:
         # Normalize to 0-1 range
         avg_score = sum(scores) / len(scores)
         return min(max(avg_score, 0.0), 1.0)
+    
+    @property
+    def cache_stats(self) -> dict:
+        """Get cache statistics for monitoring."""
+        stats = {
+            "embedding_cache": self.embedder.cache_stats if hasattr(self.embedder, 'cache_stats') else {},
+            "query_cache_enabled": self._query_cache is not None,
+        }
+        if self._query_cache:
+            stats["query_cache_size"] = self._query_cache._cache.size
+        return stats
 
 
 # =============================================================================

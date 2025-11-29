@@ -1,132 +1,125 @@
 """
-Qonfido RAG - Database Session Management
-==========================================
-Async database session configuration using SQLModel.
+Qonfido RAG - Database Session
+===============================
+Database connection and session management.
 """
 
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+import logging
+from contextlib import contextmanager
+from typing import Generator
 
-from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
-    AsyncSession,
-    create_async_engine,
-    async_sessionmaker,
-)
-from sqlmodel import SQLModel
+from sqlmodel import Session, SQLModel, create_engine
 
-from app.config import settings
+logger = logging.getLogger(__name__)
 
-# Database engine
-engine: AsyncEngine | None = None
-
-# Session factory
-AsyncSessionLocal: async_sessionmaker[AsyncSession] | None = None
+# Default to SQLite for simplicity (no server needed)
+DEFAULT_DATABASE_URL = "sqlite:///./qonfido_rag.db"
 
 
-def init_db(database_url: str | None = None) -> None:
+class DatabaseManager:
     """
-    Initialize database engine and session factory.
+    Database connection manager.
     
-    Args:
-        database_url: Optional database URL. If not provided, uses settings.
+    Supports:
+    - SQLite (default, no setup needed)
+    - PostgreSQL (for production)
     """
-    global engine, AsyncSessionLocal
-    
-    # Use provided URL or check if database is configured
-    db_url = database_url or getattr(settings, "database_url", None)
-    
-    if not db_url:
-        # Database is optional - ChromaDB is used for vector storage
-        return
-    
-    # Create async engine
-    engine = create_async_engine(
-        db_url,
-        echo=settings.debug if hasattr(settings, "debug") else False,
-        future=True,
-        pool_pre_ping=True,  # Verify connections before using
-    )
-    
-    # Create session factory
-    AsyncSessionLocal = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-        autocommit=False,
-        autoflush=False,
-    )
 
-
-async def create_tables() -> None:
-    """
-    Create all database tables.
-    
-    Should be called during application startup.
-    """
-    if engine is None:
-        return
-    
-    async with engine.begin() as conn:
-        # Import models to register them
-        from app.db.models import QueryLog  # noqa: F401
+    def __init__(self, database_url: str | None = None):
+        """
+        Initialize database manager.
         
-        # Create all tables
-        await conn.run_sync(SQLModel.metadata.create_all)
+        Args:
+            database_url: Database connection string.
+                         SQLite: sqlite:///./database.db
+                         PostgreSQL: postgresql://user:pass@host:port/db
+        """
+        self.database_url = database_url or DEFAULT_DATABASE_URL
+        self._engine = None
 
+    @property
+    def engine(self):
+        """Lazy load database engine."""
+        if self._engine is None:
+            # SQLite specific settings
+            connect_args = {}
+            if self.database_url.startswith("sqlite"):
+                connect_args["check_same_thread"] = False
 
-async def drop_tables() -> None:
-    """
-    Drop all database tables.
-    
-    Warning: Use only in development/testing.
-    """
-    if engine is None:
-        return
-    
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+            self._engine = create_engine(
+                self.database_url,
+                echo=False,  # Set True for SQL debugging
+                connect_args=connect_args,
+            )
+            logger.info(f"Database engine created: {self.database_url.split('@')[-1]}")
+        
+        return self._engine
 
+    def create_tables(self) -> None:
+        """Create all database tables."""
+        SQLModel.metadata.create_all(self.engine)
+        logger.info("Database tables created")
 
-@asynccontextmanager
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Get database session context manager.
-    
-    Usage:
-        async with get_db_session() as session:
-            # Use session
-            pass
-    """
-    if AsyncSessionLocal is None:
-        raise RuntimeError(
-            "Database not initialized. Call init_db() first or configure database_url."
-        )
-    
-    async with AsyncSessionLocal() as session:
+    def drop_tables(self) -> None:
+        """Drop all database tables (use with caution!)."""
+        SQLModel.metadata.drop_all(self.engine)
+        logger.warning("Database tables dropped")
+
+    def get_session(self) -> Session:
+        """Get a new database session."""
+        return Session(self.engine)
+
+    @contextmanager
+    def session_scope(self) -> Generator[Session, None, None]:
+        """
+        Context manager for database sessions.
+        
+        Usage:
+            with db.session_scope() as session:
+                session.add(obj)
+                session.commit()
+        """
+        session = self.get_session()
         try:
             yield session
-            await session.commit()
+            session.commit()
         except Exception:
-            await session.rollback()
+            session.rollback()
             raise
         finally:
-            await session.close()
+            session.close()
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+# =============================================================================
+# Global Instance
+# =============================================================================
+
+_db_manager: DatabaseManager | None = None
+
+
+def get_db_manager(database_url: str | None = None) -> DatabaseManager:
+    """Get or create the global database manager instance."""
+    global _db_manager
+    if _db_manager is None:
+        _db_manager = DatabaseManager(database_url)
+    return _db_manager
+
+
+def get_session() -> Generator[Session, None, None]:
     """
-    Dependency for FastAPI endpoints.
+    Dependency for FastAPI to get database sessions.
     
-    Usage:
-        @app.get("/items")
-        async def get_items(db: AsyncSession = Depends(get_db)):
+    Usage in endpoints:
+        @router.get("/items")
+        def get_items(session: Session = Depends(get_session)):
             ...
     """
-    async with get_db_session() as session:
+    db = get_db_manager()
+    with db.session_scope() as session:
         yield session
 
 
-# Initialize on import if database_url is configured
-if hasattr(settings, "database_url") and getattr(settings, "database_url", None):
-    init_db()
+def init_db(database_url: str | None = None) -> None:
+    """Initialize database and create tables."""
+    db = get_db_manager(database_url)
+    db.create_tables()

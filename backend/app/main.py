@@ -4,6 +4,7 @@ Qonfido RAG - FastAPI Application
 Main entry point for the FastAPI application.
 """
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,7 +12,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.config import settings
+from app.core.orchestration import get_pipeline
 from app.utils.logging import setup_logging
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -20,17 +24,57 @@ async def lifespan(app: FastAPI):
     Application lifespan manager.
     
     Handles startup and shutdown events.
+    Pre-initializes the RAG pipeline (model loading, embeddings, indexing)
+    and loads fund data cache.
     """
     # Startup
     setup_logging(settings.log_level)
     
-    # Initialize services here if needed
-    # e.g., load embeddings, connect to vector store
+    # Fix tokenizers parallelism warning
+    import os
+    os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
+    
+    logger.info("=" * 80)
+    logger.info("Starting Qonfido RAG Backend...")
+    logger.info("=" * 80)
+    
+    # Pre-load funds cache (fast, doesn't need models)
+    # Clear any existing cache to ensure fresh data from CSV
+    logger.info("\n[1/2] Loading funds data cache...")
+    try:
+        from app.api.v1.funds import clear_funds_cache, get_funds
+        clear_funds_cache()  # Clear old cache to load fresh from CSV
+        funds = get_funds()  # Load fresh data from CSV files
+        logger.info(f"✓ Loaded {len(funds)} funds from CSV into cache")
+    except Exception as e:
+        logger.warning(f"⚠ Failed to pre-load funds cache: {e}")
+        logger.info("  Funds will be loaded on first request")
+    
+    # Pre-initialize RAG pipeline
+    # This loads the embedding model, generates embeddings, and indexes documents
+    logger.info("\n[2/2] Pre-initializing RAG pipeline...")
+    logger.info("  This includes:")
+    logger.info("    - Downloading embedding model (first time only, ~2.3GB)")
+    logger.info("    - Generating embeddings for all documents")
+    logger.info("    - Indexing for semantic and lexical search")
+    logger.info("  This may take a few minutes on first run...")
+    
+    try:
+        pipeline = get_pipeline()
+        pipeline.initialize()  # Synchronous initialization
+        logger.info("\n" + "=" * 80)
+        logger.info("✓ RAG pipeline initialized successfully!")
+        logger.info("✓ Backend is ready to serve requests")
+        logger.info("=" * 80 + "\n")
+    except Exception as e:
+        logger.error(f"\n✗ Failed to initialize RAG pipeline: {e}")
+        logger.warning("API will start, but query functionality may be limited")
+        logger.warning("Try restarting the server once the model download completes\n")
     
     yield
     
     # Shutdown
-    # Cleanup resources here if needed
+    logger.info("\nShutting down backend...")
 
 
 def create_app() -> FastAPI:

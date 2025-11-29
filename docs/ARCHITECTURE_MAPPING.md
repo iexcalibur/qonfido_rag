@@ -45,7 +45,6 @@ Architecture Diagram                 →  Folder Structure
 └── Redis                            →  backend/app/services/
 
 👁️ OBSERVABILITY LAYER (Monitoring & Evaluation)
-├── LangFuse                         →  backend/app/services/
 ├── Ragas                            →  backend/tests/evaluation/
 └── Pytest                           →  backend/tests/
 
@@ -135,9 +134,8 @@ qonfido-rag/
 │   │   │
 │   │   ├── 📁 services/                ← 💾 DATA LAYER (Qdrant, Redis) + 👁️ OBSERVABILITY
 │   │   │   ├── 📄 __init__.py
-│   │   │   ├── 📄 vector_store.py      ← Qdrant service
-│   │   │   ├── 📄 cache.py             ← Redis cache service
-│   │   │   └── 📄 tracing.py           ← LangFuse tracing
+│   │   │   ├── 📄 vector_store.py      ← ChromaDB service
+│   │   │   └── 📄 cache.py             ← Redis cache service
 │   │   │
 │   │   └── 📁 utils/
 │   │       ├── 📄 __init__.py

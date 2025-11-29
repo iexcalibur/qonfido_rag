@@ -160,11 +160,37 @@ class FundData(BaseModel):
 class DataLoader:
     """Load data from CSV files."""
 
-    def __init__(self, data_dir: str = "data/raw"):
+    def __init__(
+        self, 
+        data_dir: str = "data/raw", 
+        faqs_file: str = "faqs.csv", 
+        funds_file: str = "funds.csv"
+    ):
+        """
+        Initialize data loader with configurable file paths.
+        
+        Args:
+            data_dir: Directory containing CSV files
+            faqs_file: Name of FAQs CSV file
+            funds_file: Name of funds CSV file
+        """
         self.data_dir = Path(data_dir)
+        self.faqs_file = faqs_file
+        self.funds_file = funds_file
 
-    def load_faqs(self, filename: str = "mutual_fund_faqs.csv") -> list[FAQItem]:
-        """Load FAQ data from CSV."""
+    def load_faqs(self, filename: str | None = None) -> list[FAQItem]:
+        """
+        Load FAQ data from CSV.
+        
+        Args:
+            filename: Optional override for FAQ filename
+            
+        Returns:
+            List of FAQItem objects
+        """
+        if filename is None:
+            filename = self.faqs_file
+            
         filepath = self.data_dir / filename
 
         if not filepath.exists():
@@ -201,8 +227,19 @@ class DataLoader:
             logger.error(f"Error loading FAQs: {e}")
             raise
 
-    def load_funds(self, filename: str = "fund_performance.csv") -> list[FundData]:
-        """Load fund performance data from CSV."""
+    def load_funds(self, filename: str | None = None) -> list[FundData]:
+        """
+        Load fund performance data from CSV.
+        
+        Args:
+            filename: Optional override for funds filename
+            
+        Returns:
+            List of FundData objects
+        """
+        if filename is None:
+            filename = self.funds_file
+            
         filepath = self.data_dir / filename
 
         if not filepath.exists():
@@ -232,16 +269,16 @@ class DataLoader:
                         row, ["sub_category", "Sub Category", "subcategory"]
                     ),
                     cagr_1yr=self._get_numeric_value(
-                        row, ["cagr_1yr", "1yr_cagr", "return_1yr", "1_year_return", "returns_1yr"]
+                        row, ["cagr_1yr", "cagr_1yr (%)", "1yr_cagr", "return_1yr", "1_year_return", "returns_1yr", "1yr_cagr (%)"]
                     ),
                     cagr_3yr=self._get_numeric_value(
-                        row, ["cagr_3yr", "3yr_cagr", "return_3yr", "3_year_return", "returns_3yr"]
+                        row, ["cagr_3yr", "cagr_3yr (%)", "3yr_cagr", "return_3yr", "3_year_return", "returns_3yr", "3yr_cagr (%)"]
                     ),
                     cagr_5yr=self._get_numeric_value(
-                        row, ["cagr_5yr", "5yr_cagr", "return_5yr", "5_year_return", "returns_5yr"]
+                        row, ["cagr_5yr", "cagr_5yr (%)", "5yr_cagr", "return_5yr", "5_year_return", "returns_5yr", "5yr_cagr (%)"]
                     ),
                     volatility=self._get_numeric_value(
-                        row, ["volatility", "std_dev", "standard_deviation", "risk"]
+                        row, ["volatility", "volatility (%)", "std_dev", "standard_deviation", "risk", "volatility %"]
                     ),
                     sharpe_ratio=self._get_numeric_value(
                         row, ["sharpe_ratio", "sharpe", "Sharpe Ratio", "sharpe_3yr"]

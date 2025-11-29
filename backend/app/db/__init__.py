@@ -1,38 +1,31 @@
 """
 Qonfido RAG - Database Module
 ==============================
-Database configuration, models, and repositories.
+Database models, sessions, and repositories.
 """
 
-from app.db.models import QueryLog, QueryFeedback
-from app.db.repositories import (
-    QueryLogRepository,
-    QueryFeedbackRepository,
-)
+from app.db.models import FAQ, Fund, QueryLog, EmbeddingCache
+from app.db.repositories import FAQRepository, FundRepository, QueryLogRepository
 from app.db.session import (
-    get_db,
-    get_db_session,
+    DatabaseManager,
+    get_db_manager,
+    get_session,
     init_db,
-    create_tables,
-    drop_tables,
-    engine,
-    AsyncSessionLocal,
 )
 
 __all__ = [
     # Models
+    "Fund",
+    "FAQ",
     "QueryLog",
-    "QueryFeedback",
-    # Repositories
-    "QueryLogRepository",
-    "QueryFeedbackRepository",
-    # Session management
-    "get_db",
-    "get_db_session",
+    "EmbeddingCache",
+    # Session
+    "DatabaseManager",
+    "get_db_manager",
+    "get_session",
     "init_db",
-    "create_tables",
-    "drop_tables",
-    "engine",
-    "AsyncSessionLocal",
+    # Repositories
+    "FundRepository",
+    "FAQRepository",
+    "QueryLogRepository",
 ]
-
