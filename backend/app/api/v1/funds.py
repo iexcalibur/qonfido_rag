@@ -1,0 +1,218 @@
+"""
+Qonfido RAG - Fund Endpoints
+=============================
+Endpoints for fund data and comparison.
+"""
+
+import logging
+
+from fastapi import APIRouter, HTTPException, Query
+
+from app.api.schemas import (
+    FundCompareRequest,
+    FundCompareResponse,
+    FundDetail,
+    FundListResponse,
+    FundSummary,
+)
+from app.core.ingestion.loader import DataLoader
+
+router = APIRouter(tags=["Funds"])
+logger = logging.getLogger(__name__)
+
+# Data loader instance
+_loader: DataLoader | None = None
+_funds_cache: list | None = None
+
+
+def get_funds():
+    """Get cached funds data."""
+    global _loader, _funds_cache
+    if _funds_cache is None:
+        _loader = DataLoader()
+        _funds_cache = _loader.load_funds()
+    return _funds_cache
+
+
+@router.get("/funds", response_model=FundListResponse)
+async def list_funds(
+    category: str | None = Query(None, description="Filter by category"),
+    risk_level: str | None = Query(None, description="Filter by risk level"),
+    limit: int = Query(50, ge=1, le=100, description="Maximum results"),
+) -> FundListResponse:
+    """
+    List all available funds.
+    
+    Optionally filter by category or risk level.
+    """
+    try:
+        funds = get_funds()
+        
+        # Apply filters
+        filtered = funds
+        if category:
+            filtered = [f for f in filtered if f.category and category.lower() in f.category.lower()]
+        if risk_level:
+            filtered = [f for f in filtered if f.risk_level and risk_level.lower() in f.risk_level.lower()]
+        
+        # Convert to response model
+        fund_summaries = [
+            FundSummary(
+                id=f.id,
+                fund_name=f.fund_name,
+                fund_house=f.fund_house,
+                category=f.category,
+                risk_level=f.risk_level,
+            )
+            for f in filtered[:limit]
+        ]
+        
+        return FundListResponse(
+            funds=fund_summaries,
+            total=len(filtered),
+        )
+        
+    except Exception as e:
+        logger.error(f"Error listing funds: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve funds")
+
+
+@router.get("/funds/{fund_id}", response_model=FundDetail)
+async def get_fund(fund_id: str) -> FundDetail:
+    """
+    Get detailed information about a specific fund.
+    """
+    try:
+        funds = get_funds()
+        
+        # Find fund by ID
+        fund = next((f for f in funds if f.id == fund_id), None)
+        
+        if not fund:
+            raise HTTPException(status_code=404, detail=f"Fund not found: {fund_id}")
+        
+        return FundDetail(
+            id=fund.id,
+            fund_name=fund.fund_name,
+            fund_house=fund.fund_house,
+            category=fund.category,
+            sub_category=fund.sub_category,
+            cagr_1yr=fund.cagr_1yr,
+            cagr_3yr=fund.cagr_3yr,
+            cagr_5yr=fund.cagr_5yr,
+            volatility=fund.volatility,
+            sharpe_ratio=fund.sharpe_ratio,
+            sortino_ratio=fund.sortino_ratio,
+            max_drawdown=fund.max_drawdown,
+            beta=fund.beta,
+            alpha=fund.alpha,
+            aum=fund.aum,
+            expense_ratio=fund.expense_ratio,
+            nav=fund.nav,
+            risk_level=fund.risk_level,
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting fund {fund_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve fund")
+
+
+@router.post("/funds/compare", response_model=FundCompareResponse)
+async def compare_funds(request: FundCompareRequest) -> FundCompareResponse:
+    """
+    Compare multiple funds side by side.
+    
+    Provide 2-5 fund IDs to compare their metrics.
+    """
+    try:
+        funds = get_funds()
+        
+        # Find requested funds
+        fund_details = []
+        for fund_id in request.fund_ids:
+            fund = next((f for f in funds if f.id == fund_id), None)
+            if fund:
+                fund_details.append(
+                    FundDetail(
+                        id=fund.id,
+                        fund_name=fund.fund_name,
+                        fund_house=fund.fund_house,
+                        category=fund.category,
+                        sub_category=fund.sub_category,
+                        cagr_1yr=fund.cagr_1yr,
+                        cagr_3yr=fund.cagr_3yr,
+                        cagr_5yr=fund.cagr_5yr,
+                        volatility=fund.volatility,
+                        sharpe_ratio=fund.sharpe_ratio,
+                        sortino_ratio=fund.sortino_ratio,
+                        max_drawdown=fund.max_drawdown,
+                        beta=fund.beta,
+                        alpha=fund.alpha,
+                        aum=fund.aum,
+                        expense_ratio=fund.expense_ratio,
+                        nav=fund.nav,
+                        risk_level=fund.risk_level,
+                    )
+                )
+        
+        if len(fund_details) < 2:
+            raise HTTPException(
+                status_code=400, 
+                detail="At least 2 valid fund IDs required for comparison"
+            )
+        
+        return FundCompareResponse(
+            funds=fund_details,
+            comparison_summary=None,  # Can be generated by LLM
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error comparing funds: {e}")
+        raise HTTPException(status_code=500, detail="Failed to compare funds")
+
+
+@router.get("/funds/summary/metrics")
+async def get_fund_metrics_summary() -> dict:
+    """
+    Get summary statistics of all fund metrics.
+    
+    Useful for understanding the range of values in the dataset.
+    """
+    try:
+        funds = get_funds()
+        
+        # Calculate summary statistics
+        sharpe_ratios = [f.sharpe_ratio for f in funds if f.sharpe_ratio is not None]
+        cagr_3yr = [f.cagr_3yr for f in funds if f.cagr_3yr is not None]
+        volatilities = [f.volatility for f in funds if f.volatility is not None]
+        
+        return {
+            "total_funds": len(funds),
+            "metrics": {
+                "sharpe_ratio": {
+                    "min": min(sharpe_ratios) if sharpe_ratios else None,
+                    "max": max(sharpe_ratios) if sharpe_ratios else None,
+                    "avg": sum(sharpe_ratios) / len(sharpe_ratios) if sharpe_ratios else None,
+                },
+                "cagr_3yr": {
+                    "min": min(cagr_3yr) if cagr_3yr else None,
+                    "max": max(cagr_3yr) if cagr_3yr else None,
+                    "avg": sum(cagr_3yr) / len(cagr_3yr) if cagr_3yr else None,
+                },
+                "volatility": {
+                    "min": min(volatilities) if volatilities else None,
+                    "max": max(volatilities) if volatilities else None,
+                    "avg": sum(volatilities) / len(volatilities) if volatilities else None,
+                },
+            },
+            "categories": list(set(f.category for f in funds if f.category)),
+            "risk_levels": list(set(f.risk_level for f in funds if f.risk_level)),
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting metrics summary: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get metrics summary")

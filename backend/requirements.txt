@@ -1,0 +1,100 @@
+# =============================================================================
+# Qonfido RAG - Backend Requirements
+# Python Version: 3.11+ (Recommended: 3.11.x)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Core Framework
+# -----------------------------------------------------------------------------
+fastapi==0.115.6                  # Async REST API framework
+uvicorn[standard]==0.34.0         # ASGI server
+pydantic==2.10.4                  # Data validation
+pydantic-settings==2.7.0          # Settings management
+
+# -----------------------------------------------------------------------------
+# Database & ORM
+# -----------------------------------------------------------------------------
+sqlmodel==0.0.22                  # SQLAlchemy + Pydantic ORM
+psycopg2-binary==2.9.10           # PostgreSQL adapter
+asyncpg==0.30.0                   # Async PostgreSQL
+alembic==1.14.0                   # Database migrations
+
+# -----------------------------------------------------------------------------
+# Vector Store & Search
+# -----------------------------------------------------------------------------
+qdrant-client==1.12.1             # Qdrant vector database client
+rank-bm25==0.2.2                  # BM25 lexical search
+
+# -----------------------------------------------------------------------------
+# Embeddings & ML
+# -----------------------------------------------------------------------------
+sentence-transformers==3.3.1      # For BGE-M3 embeddings
+torch==2.5.1                      # PyTorch (CPU version, use torch+cu121 for GPU)
+transformers==4.47.1              # Hugging Face transformers
+FlagEmbedding==1.2.12             # BGE-M3 official package
+
+# -----------------------------------------------------------------------------
+# LLM & Orchestration
+# -----------------------------------------------------------------------------
+anthropic==0.40.0                 # Claude API client
+instructor==1.7.2                 # Structured LLM outputs
+langgraph==0.2.60                 # Agentic workflows
+langchain-core==0.3.28            # LangChain core utilities
+langchain-anthropic==0.3.1        # LangChain Claude integration
+
+# -----------------------------------------------------------------------------
+# Reranking
+# -----------------------------------------------------------------------------
+cohere==5.13.4                    # Cohere Rerank API
+
+# -----------------------------------------------------------------------------
+# Caching
+# -----------------------------------------------------------------------------
+redis==5.2.1                      # Redis client
+hiredis==3.1.0                    # Fast Redis parser
+
+# -----------------------------------------------------------------------------
+# Observability & Tracing
+# -----------------------------------------------------------------------------
+langfuse==2.57.1                  # LLM observability
+opentelemetry-api==1.29.0         # Telemetry API
+opentelemetry-sdk==1.29.0         # Telemetry SDK
+
+# -----------------------------------------------------------------------------
+# Data Processing
+# -----------------------------------------------------------------------------
+pandas==2.2.3                     # Data manipulation
+numpy==1.26.4                     # Numerical computing
+python-dotenv==1.0.1              # Environment variables
+
+# -----------------------------------------------------------------------------
+# Evaluation
+# -----------------------------------------------------------------------------
+ragas==0.2.8                      # RAG evaluation framework
+datasets==3.2.0                   # Hugging Face datasets
+
+# -----------------------------------------------------------------------------
+# Testing
+# -----------------------------------------------------------------------------
+pytest==8.3.4                     # Testing framework
+pytest-asyncio==0.25.0            # Async test support
+pytest-cov==6.0.0                 # Coverage reporting
+httpx==0.28.1                     # Async HTTP client for testing
+
+# -----------------------------------------------------------------------------
+# Code Quality
+# -----------------------------------------------------------------------------
+ruff==0.8.4                       # Fast linter & formatter
+black==24.10.0                    # Code formatter
+mypy==1.14.0                      # Type checking
+pre-commit==4.0.1                 # Git hooks
+
+# -----------------------------------------------------------------------------
+# Utilities
+# -----------------------------------------------------------------------------
+tenacity==9.0.0                   # Retry logic
+tqdm==4.67.1                      # Progress bars
+rich==13.9.4                      # Beautiful terminal output
+typer==0.15.1                     # CLI framework
+python-multipart==0.0.19          # File uploads
+aiofiles==24.1.0                  # Async file operations
