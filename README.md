@@ -1,11 +1,11 @@
 # Qonfido RAG - AI Financial Co-Pilot
 
-A Retrieval-Augmented Generation (RAG) system for financial data, built for the Qonfido AI Co-Pilot assignment.
+A high-performance Retrieval-Augmented Generation (RAG) system built for financial intelligence. It combines semantic understanding with precise financial metrics to answer complex queries about mutual funds.
 
 ![Python](https://img.shields.io/badge/Python-3.12+-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green)
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
-![Claude](https://img.shields.io/badge/Claude-API-purple)
+![Claude](https://img.shields.io/badge/Claude-Opus%2FSonnet-purple)
 
 <img width="1325" height="806" alt="Screenshot 2025-11-30 at 10 27 15 AM" src="https://github.com/user-attachments/assets/15e32be4-edb2-4931-bc3a-e771ccba9e62" />
 <img width="1325" height="807" alt="Screenshot 2025-11-30 at 10 27 27 AM" src="https://github.com/user-attachments/assets/2ee82400-c731-4d96-adc0-1bf44dda9c94" />
@@ -14,112 +14,129 @@ A Retrieval-Augmented Generation (RAG) system for financial data, built for the 
 <img width="1325" height="806" alt="Screenshot 2025-11-30 at 10 28 17 AM" src="https://github.com/user-attachments/assets/0e730385-fa22-4708-8883-13fb9ec0f20e" />
 
 
-## 🎯 Overview
+## 🎯 Capabilities
 
-This system enables natural language queries about mutual funds, combining:
-- **Textual Knowledge**: FAQs and financial concepts
-- **Quantitative Data**: Fund performance metrics (CAGR, Sharpe ratio, volatility, etc.)
+This system goes beyond simple text matching by handling **structured financial data** alongside unstructured text.
 
-Users can ask questions like:
-- *"Which funds have the best Sharpe ratio?"*
-- *"What is an index fund?"*
-- *"Show me low-risk funds with good returns"*
+- **📈 Quantitative Analysis**: "Which funds have a Sharpe ratio > 1.5 and low volatility?"
+
+- **🧠 Conceptual Queries**: "What is the difference between a Flexi Cap and a Multi Cap fund?"
+
+- **⚡ Hybrid Queries**: "Show me the best performing Large Cap funds and explain why they are safe."
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Frontend (Next.js 16)                    │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
-│  │   Home      │  │  AI Chat    │  │    Fund Explorer        │  │
-│  │  (Cosmic)   │  │  (Glass UI) │  │    (Grid + Filters)     │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────────┘  │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ REST API
-┌───────────────────────────▼─────────────────────────────────────┐
-│                      FastAPI Backend                             │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                     RAG Pipeline                          │   │
-│  │  ┌─────────┐  ┌───────────┐  ┌─────────┐  ┌───────────┐  │   │
-│  │  │ Embed   │→ │ Retrieve  │→ │ Rerank  │→ │ Generate  │  │   │
-│  │  │ (BGE-M3)│  │ (Hybrid)  │  │(Cohere) │  │ (Claude)  │  │   │
-│  │  └─────────┘  └───────────┘  └─────────┘  └───────────┘  │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
-│  │ BM25 Index   │  │ ChromaDB     │  │ In-Memory Cache      │   │
-│  │ (Lexical)    │  │ (Semantic)   │  │ (Embeddings+Queries) │   │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    User[User] --> Frontend[Next.js Frontend]
+    Frontend --> API[FastAPI Backend]
+    
+    subgraph "RAG Pipeline"
+        API --> Cache{Query Cache}
+        Cache -->|Hit| Return[Return Response]
+        Cache -->|Miss| Pipeline[Process Query]
+        
+        Pipeline --> Embed[Embedder (BGE-M3)]
+        
+        subgraph "Parallel Retrieval"
+            Embed --> Lexical[Lexical Search (BM25)]
+            Embed --> Semantic[Semantic Search (ChromaDB)]
+        end
+        
+        Lexical & Semantic --> RRF[RRF Fusion]
+        RRF --> Rerank[Cohere Reranker]
+        Rerank --> LLM[Claude Generation]
+    end
+    
+    LLM --> API
 ```
 
 ## 🛠️ Tech Stack
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Backend** | FastAPI + Python 3.12+ | REST API server |
-| **Embeddings** | BGE-M3 (sentence-transformers) | 1024-dim dense vectors |
-| **Vector Store** | ChromaDB | Semantic similarity search |
-| **Lexical Search** | BM25 (rank-bm25) | Keyword matching |
-| **Hybrid Search** | RRF Fusion | Combines lexical + semantic |
-| **Reranking** | Cohere API | Two-stage retrieval (optional) |
-| **LLM** | Claude API (Anthropic) | Answer generation |
-| **Frontend** | Next.js 16 + Tailwind CSS | Modern web interface |
-| **Cache** | In-Memory (TTL-based) | Embedding + query caching |
+| Layer | Component | Technology |
+|-------|-----------|------------|
+| **Frontend** | Framework | **Next.js 16** (App Router) |
+| | Styling | **Tailwind CSS** + Radix UI |
+| | State | React Query + Custom Hooks |
+| **Backend** | API | **FastAPI** + Pydantic |
+| | Embeddings | **BGE-M3** (1024-dim) |
+| | Vector Store | **ChromaDB** (In-Process) |
+| | LLM | **Anthropic Claude 3** |
+| **Data** | Storage | SQLite + CSV |
+| | Cache | In-Memory (TTL-based) |
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Recommended)
+
+The easiest way to run the project is using the included **Makefile**.
 
 ### Prerequisites
 
 - Python 3.12+
 - Node.js 20+
 - Anthropic API Key ([Get one here](https://console.anthropic.com/))
-- Cohere API Key (optional, for reranking)
 
-### Backend Setup
+### 1. Setup Environment
 
 ```bash
-cd backend
+# Install backend & frontend dependencies
+make setup
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment
+# Create .env file and add your API keys
 cp .env.example .env
-# Edit .env and add your ANTHROPIC_API_KEY
-
-# Place your CSV files
-cp /path/to/faqs.csv data/raw/
-cp /path/to/funds.csv data/raw/
-
-# Run the server
-uvicorn app.main:app --reload --port 8000
+# (Edit .env to add ANTHROPIC_API_KEY)
 ```
 
-### Frontend Setup
+### 2. Ingest Data
+
+Loads FAQs and Fund CSVs, generates embeddings, and builds the search indexes.
 
 ```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Configure environment
-cp .env.example .env.local
-
-# Run development server
-npm run dev
+make ingest
 ```
 
-### Access
+### 3. Run Development Servers
+
+Starts both FastAPI (Port 8000) and Next.js (Port 3000) concurrently.
+
+```bash
+make dev
+```
+
+### 4. Access the App
+
+Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 
 - **Frontend**: http://localhost:3000
 - **API Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/api/v1/health
+
+---
+
+## 💡 Key Innovations
+
+### 1. 🔢 Numerical-to-Text Ingestion
+
+Standard embedding models struggle with raw numbers. We solve this by converting structured fund metrics into rich semantic text descriptions during ingestion.
+
+- *Raw:* `{"sharpe": 1.25, "cagr": 15.2}`
+- *Indexed:* `"Fund X has a 3-year CAGR of 15.2% and a Sharpe Ratio of 1.25..."`
+
+This enables semantic search over numerical data, allowing queries like *"funds with excellent risk-adjusted returns"* to find funds with high Sharpe ratios.
+
+### 2. ⚡ Parallel Hybrid Search
+
+We employ a **ThreadPoolExecutor** strategy to run BM25 (Lexical) and ChromaDB (Semantic) searches simultaneously, reducing retrieval latency by **40-50%** compared to sequential execution.
+
+### 3. 🚀 Active Caching Layer
+
+The system features a multi-layer, fully integrated caching system enabled by default:
+
+- **Embedding Cache (24h TTL):** Hashes text inputs to prevent redundant model inference.
+- **Query Cache (5m TTL):** Instant responses for repeated questions.
+
+This means second queries are **100x faster** (~50ms vs ~2-4s).
+
+---
 
 ## 📡 API Usage
 
@@ -165,6 +182,8 @@ Content-Type: application/json
 | `/api/v1/funds/{id}` | GET | Fund details |
 | `/api/v1/search-modes` | GET | Available search modes |
 
+---
+
 ## 🔧 Key Features
 
 ### 1. Hybrid Search
@@ -173,9 +192,9 @@ Content-Type: application/json
 - **RRF Fusion**: Combines both for optimal results
 - **Parallel Retrieval**: 40-50% faster than sequential
 
-### 2. Multi-Level Caching
-- **Embedding Cache**: 24hr TTL, avoids recomputing embeddings
-- **Query Cache**: 5min TTL, instant responses for repeated queries
+### 2. Active Multi-Level Caching
+- **Embedding Cache**: 24hr TTL, avoids recomputing embeddings (Active & Integrated)
+- **Query Cache**: 5min TTL, instant responses for repeated queries (Active & Integrated)
 
 ### 3. Intelligent Query Handling
 - Automatic query classification (FAQ vs numerical vs hybrid)
@@ -197,62 +216,107 @@ Content-Type: application/json
 | Embedding Cache Hit | ~10ms |
 | Parallel vs Sequential | ~40% faster |
 
-## 📁 Project Structure
+## 📂 Project Structure
 
 ```
 qonfido-rag/
-├── backend/          # FastAPI backend
-│   ├── app/         # Application code
-│   ├── data/        # CSV data files
-│   └── scripts/     # Utility scripts
-├── frontend/        # Next.js frontend
-│   └── src/         # Source code
-└── docs/            # Documentation
+├── backend/
+│   ├── app/
+│   │   ├── core/
+│   │   │   ├── ingestion/      # Loader & Embedder logic
+│   │   │   ├── retrieval/      # Lexical, Semantic & Hybrid search
+│   │   │   ├── generation/     # LLM & Prompts
+│   │   │   └── orchestration/  # Main RAG Pipeline
+│   │   └── api/                # Routes & Schemas
+│   └── data/raw/               # Source CSV files
+├── frontend/
+│   ├── src/
+│   │   ├── app/chat/           # Chat interface logic
+│   │   ├── components/         # Reusable UI components
+│   │   └── hooks/              # Data fetching hooks
+├── docs/                       # Detailed Architecture Docs
+└── Makefile                    # Automation commands
 ```
 
-For detailed structure, see:
-- [Backend Structure](docs/backend-structure.md)
-- [Frontend Structure](docs/frontend-structure.md)
+Detailed documentation:
+- [Backend Architecture](docs/BACKEND_DOCUMENTATION.md)
+- [Frontend Architecture](docs/FRONTEND_DOCUMENTATION.md)
+- [Data Flow Diagrams](docs/DATA_FLOW_DIAGRAMS.md)
 
-## 📚 Documentation
 
-- **[Data Flow](docs/data-flow.md)** - End-to-end RAG pipeline diagram
-- **[Deep Architecture](docs/deep-architecture.md)** - Technical architecture details
-- **[Backend Structure](docs/backend-structure.md)** - Backend organization
-- **[Frontend Structure](docs/frontend-structure.md)** - Frontend organization
+## 🧪 Testing & Evaluation
 
-## ⚙️ Configuration
+We include a comprehensive evaluation suite to measure RAG quality.
 
-Key environment variables:
+```bash
+# Run full evaluation suite
+make evaluate
+
+# Compare search modes (Hybrid vs Lexical vs Semantic)
+python -m scripts.evaluate --mode all
+
+# Test a single query manually
+python -m scripts.test_query "What is the best fund for high risk?"
+```
+
+## ⚙️ Configuration (.env)
 
 ```env
 # Required
 ANTHROPIC_API_KEY=sk-ant-...
 
-# Optional
-COHERE_API_KEY=...              # For reranking
-EMBEDDING_MODEL=BAAI/bge-m3     # Embedding model
+# Optional (Features degrade gracefully if missing)
+COHERE_API_KEY=...          # Enables Reranking step
+EMBEDDING_MODEL=BAAI/bge-m3 # Can swap to 'all-MiniLM-L6-v2' for speed
 CLAUDE_MODEL=claude-3-opus-20240229
-DATA_DIR=data/raw
-FAQS_FILE=faqs.csv
-FUNDS_FILE=funds.csv
 ```
 
-See `.env.example` for full configuration options.
+---
 
-## 🧪 Testing
+## 📋 Manual Setup (Alternative)
+
+If you prefer not to use the Makefile, you can set up manually:
+
+### Backend Setup
 
 ```bash
 cd backend
 
-# Run evaluation
-python -m scripts.evaluate --verbose
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Compare all search modes
-python -m scripts.evaluate --mode all
+# Install dependencies
+pip install -r requirements.txt
 
-# Test specific query
-python -m scripts.test_query "What is a mutual fund?"
+# Configure environment
+cp .env.example .env
+# Edit .env and add your ANTHROPIC_API_KEY
+
+# Place your CSV files
+cp /path/to/faqs.csv data/raw/
+cp /path/to/funds.csv data/raw/
+
+# Ingest data
+python scripts/ingest_data.py
+
+# Run the server
+uvicorn app.main:app --reload --port 8000
+```
+
+### Frontend Setup
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env.local
+
+# Run development server
+npm run dev
 ```
 
 ## 🐛 Troubleshooting
