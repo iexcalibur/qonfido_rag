@@ -7,6 +7,13 @@ A Retrieval-Augmented Generation (RAG) system for financial data, built for the 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black)
 ![Claude](https://img.shields.io/badge/Claude-API-purple)
 
+<img width="1325" height="806" alt="Screenshot 2025-11-30 at 10 27 15 AM" src="https://github.com/user-attachments/assets/15e32be4-edb2-4931-bc3a-e771ccba9e62" />
+<img width="1325" height="807" alt="Screenshot 2025-11-30 at 10 27 27 AM" src="https://github.com/user-attachments/assets/2ee82400-c731-4d96-adc0-1bf44dda9c94" />
+<img width="1326" height="810" alt="Screenshot 2025-11-30 at 10 27 42 AM" src="https://github.com/user-attachments/assets/646e5f65-5bfc-43dd-b93a-e8b24aa2f7a3" />
+<img width="1324" height="807" alt="Screenshot 2025-11-30 at 10 28 00 AM" src="https://github.com/user-attachments/assets/a7e71a28-889a-457e-94dd-7c3b62726ffb" />
+<img width="1325" height="806" alt="Screenshot 2025-11-30 at 10 28 17 AM" src="https://github.com/user-attachments/assets/0e730385-fa22-4708-8883-13fb9ec0f20e" />
+
+
 ## 🎯 Overview
 
 This system enables natural language queries about mutual funds, combining:
