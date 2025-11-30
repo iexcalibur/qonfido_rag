@@ -26,122 +26,48 @@ This system goes beyond simple text matching by handling **structured financial 
 
 ## 🏗️ Architecture
 
-### System Overview
-
-The system follows a **layered architecture** pattern with clear separation of concerns:
-
-```
-Client Layer (Next.js) → API Gateway (FastAPI) → Application Layer (RAG Pipeline) 
-  → Retrieval Layer (Hybrid Search) → Generation Layer (Claude) → Data Layer
-```
-
-### Architecture Flow
+### High-Level Overview
 
 ```mermaid
-flowchart TB
-    User[User] --> Frontend[Next.js Frontend]
-    Frontend --> API[FastAPI Backend]
+flowchart LR
+    User[👤 User] --> Frontend[🖥️ Next.js Frontend]
+    Frontend -->|HTTP/REST| API[⚙️ FastAPI Backend]
     
-    subgraph "Initialization (Startup)"
-        direction TB
-        Init[Pipeline Initialize] --> HashCheck{Hash Check}
-        HashCheck -->|Match| LoadPersist[Load from Persistent Store<br/>~5-10 seconds]
-        HashCheck -->|Mismatch| ReIndex[Re-index & Save State<br/>~2-4 minutes]
-        LoadPersist --> Ready[System Ready]
-        ReIndex --> Ready
+    API -->|Query| RAG[RAG Pipeline]
+    
+    RAG -->|Retrieve| Search[🔍 Hybrid Search<br/>Lexical + Semantic]
+    Search -->|Generate| LLM[🤖 Claude LLM]
+    LLM -->|Answer| API
+    API --> Frontend
+    
+    subgraph Storage[💾 Storage]
+        Vector[(ChromaDB<br/>Vector Store)]
+        Cache[(Cache<br/>Embeddings & Queries)]
+        CSV[📄 CSV Files<br/>FAQs & Funds]
     end
     
-    subgraph "RAG Pipeline (Query Processing)"
-        direction TB
-        API --> Cache{Query Cache}
-        Cache -->|Hit| Return[Return Response<br/>~50ms]
-        Cache -->|Miss| Pipeline[Process Query]
-        
-        Pipeline --> Embed[Embedder<br/>BGE-M3]
-        
-        subgraph "Parallel Retrieval"
-            direction LR
-            Embed --> Lexical[Lexical Search<br/>BM25 In-Memory]
-            Embed --> Semantic[Semantic Search<br/>ChromaDB Persistent]
-        end
-        
-        Lexical & Semantic --> RRF[RRF Fusion]
-        RRF --> Rerank[Cohere Reranker]
-        Rerank --> LLM[Claude Generation]
-        LLM --> API
-    end
+    RAG -.->|Read/Write| Storage
     
-    subgraph "Storage Layer"
-        direction TB
-        PersistDB[(ChromaDB<br/>Persistent Vector Store)]
-        StateFile[State File<br/>data/index.state]
-        EmbedCache[Embedding Cache<br/>24h TTL]
-        QueryCache[Query Cache<br/>5m TTL]
-    end
-    
-    Semantic -.->|Reads/Writes| PersistDB
-    HashCheck -.->|Checks| StateFile
-    Embed -.->|Uses| EmbedCache
-    Cache -.->|Uses| QueryCache
-    
-    style LoadPersist fill:#c8e6c9
-    style ReIndex fill:#fff9c4
-    style PersistDB fill:#e1f5ff
-    style StateFile fill:#f3e5f5
+    style RAG fill:#e1f5ff
+    style Search fill:#c8e6c9
+    style LLM fill:#fff9c4
 ```
 
-### Key Architectural Patterns
+### System Flow
 
-1. **Layered Architecture**: Separation of concerns (API → Application → Domain → Infrastructure)
-2. **Pipeline Pattern**: Sequential processing (Query → Retrieve → Generate → Respond)
-3. **Strategy Pattern**: Multiple retrieval strategies (Lexical, Semantic, Hybrid) selectable at runtime
-4. **Singleton Pattern**: Global instances for expensive components (embedder, models)
+1. **User Query** → Frontend sends query to FastAPI backend
+2. **RAG Pipeline** → Processes query through hybrid search (BM25 + Vector)
+3. **Retrieval** → Finds relevant documents from vector store and cache
+4. **Generation** → Claude LLM generates answer from retrieved context
+5. **Response** → Returns structured answer with sources and fund metrics
 
-### Design Decisions
+### Key Components
 
-#### Why Hybrid Search?
-- **Lexical (BM25)**: Excellent for exact keyword matching (fund names, metrics)
-- **Semantic (Vector)**: Handles paraphrasing and conceptual queries
-- **RRF Fusion**: Combines both optimally without training data
-- **Parallel Execution**: 40-50% latency reduction vs sequential
+- **Hybrid Search**: Combines lexical (BM25) and semantic (vector) search for optimal results
+- **Multi-Level Caching**: Embedding cache (24h) + Query cache (5min) for fast responses
+- **Smart Persistence**: Hash-based change detection for fast startup (~5-10s)
 
-#### Why ChromaDB?
-- **Simplicity**: No server needed (in-process), faster development
-- **Sufficient Scale**: Handles MVP scale (thousands of documents) efficiently
-- **Persistence**: Built-in with minimal configuration
-- **Trade-off**: Less scalable than distributed Qdrant, but simpler for MVP
-
-#### Why BGE-M3 (Local) over API?
-- **Cost**: Free (no per-request charges)
-- **Privacy**: Data never leaves the system
-- **Latency**: No network round-trip
-- **Trade-off**: Larger model size (~2.3GB), slower initial load
-
-#### Why Hash-Based Persistence?
-- **Fast Startup**: ~5-10 seconds if data unchanged vs 2-4 minutes to re-index
-- **Automatic Detection**: Detects data/config changes via MD5 hash
-- **Developer Experience**: No manual cache invalidation needed
-
-#### Why Multi-Level Caching?
-- **Embedding Cache (24hr)**: Prevents redundant model inference
-- **Query Cache (5min)**: Instant responses for repeated queries (100x faster)
-- **Performance Impact**: First query ~2-4s, cached query ~50ms
-
-### Scalability
-
-**Current Scale (MVP)**:
-- Documents: ~100-1000 documents (FAQs + Funds)
-- Queries: ~10-100 queries/minute
-- Architecture: Single instance, vertical scaling
-
-**Scaling Path**:
-1. **Vertical Scaling**: Larger instance (up to ~10K docs, ~1K qpm)
-2. **Horizontal Scaling**: Multiple instances + shared services (Redis, Qdrant server)
-3. **Distributed**: Sharding + read replicas for enterprise scale
-
-The architecture is **production-ready for MVP scale** with a **clear path to enterprise scale**.
-
-📖 **For detailed architecture documentation, see [Architecture & Design Decisions](docs/ARCHITECTURE_AND_DESIGN_DECISIONS.md)**
+📖 **For detailed architecture, design decisions, and scalability, see [Architecture & Design Decisions](docs/ARCHITECTURE_AND_DESIGN_DECISIONS.md)**
 
 ## 🛠️ Tech Stack
 
