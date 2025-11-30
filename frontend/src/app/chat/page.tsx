@@ -7,7 +7,7 @@ import { useChat } from '@/hooks';
 import { ChatMessage as ChatMessageComponent, ChatInput, WelcomeMessage } from '@/components/chat';
 
 function ChatContent() {
-  // Replace local state with hook
+  // Use useChat hook for state management and API calls
   const { messages, isLoading, sendMessage } = useChat();
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
