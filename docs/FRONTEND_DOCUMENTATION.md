@@ -24,19 +24,14 @@ frontend/
 │   │
 │   ├── components/              # React Components
 │   │   ├── Header.tsx           # Main navigation header
-│   │   ├── chat/                # Chat-related components
-│   │   │   ├── ChatInput.tsx    # Chat input with search mode
-│   │   │   ├── ChatMessage.tsx  # Individual chat message
-│   │   │   ├── CitationChip.tsx # Source citation badge
-│   │   │   ├── FundAnalysisResults.tsx # Fund metrics grid
-│   │   │   ├── FundInsightCard.tsx     # Individual fund card
-│   │   │   ├── FundMetricsUtils.ts     # Metric utility functions
-│   │   │   ├── WelcomeMessage.tsx # Welcome screen
-│   │   │   └── index.ts         # Component exports
-│   │   └── layout/              # Layout components
-│   │       ├── ConditionalLayout.tsx # Conditional layout wrapper
-│   │       ├── Header.tsx       # Alternative header
-│   │       ├── Sidebar.tsx      # Sidebar navigation
+│   │   └── chat/                # Chat-related components
+│   │       ├── ChatInput.tsx    # Chat input with search mode
+│   │       ├── ChatMessage.tsx  # Individual chat message
+│   │       ├── CitationChip.tsx # Source citation badge
+│   │       ├── FundAnalysisResults.tsx # Fund metrics grid
+│   │       ├── FundInsightCard.tsx     # Individual fund card
+│   │       ├── FundMetricsUtils.ts     # Metric utility functions
+│   │       ├── WelcomeMessage.tsx # Welcome screen
 │   │       └── index.ts         # Component exports
 │   │
 │   ├── lib/                     # Utility Libraries
@@ -705,57 +700,6 @@ frontend/
 
 ---
 
-#### `frontend/src/components/layout/ConditionalLayout.tsx`
-- **Path:** `frontend/src/components/layout/ConditionalLayout.tsx`
-- **Purpose:** Conditionally renders layout (sidebar/header)
-- **What it contains:**
-  - Route detection
-  - Conditional layout rendering
-  - Sidebar and Header components
-- **Key Features:**
-  - **Full Page Mode:** Homepage renders without sidebar/header
-  - **Standard Layout:** Other pages get sidebar + header
-  - **Route-Based:** Uses `usePathname()` to detect route
-- **Layout Structure:**
-  - Full page: Just children (homepage)
-  - Standard: Sidebar + Header + Main content area
-- **Why it exists:**
-  - Different layouts for different pages
-  - Homepage is full-screen, other pages have navigation
-- **Impact:**
-  - **Medium** - Layout structure
-  - Enables full-screen homepage
-- **Key Implementation Details:**
-  - ✅ Route-based conditional rendering
-  - ✅ Sidebar with fixed width (16/64 on mobile/desktop)
-  - ✅ Header with fixed position
-- **Lines:** ~32
-
----
-
-#### `frontend/src/components/layout/Header.tsx`
-- **Path:** `frontend/src/components/layout/Header.tsx`
-- **Purpose:** Alternative header component for layout
-- **Status:** ⚠️ May be duplicate or alternative to main Header.tsx
-- **Note:** Two Header components exist (main Header.tsx and layout/Header.tsx)
-
----
-
-#### `frontend/src/components/layout/Sidebar.tsx`
-- **Path:** `frontend/src/components/layout/Sidebar.tsx`
-- **Purpose:** Sidebar navigation component
-- **Status:** Used by ConditionalLayout
-- **Note:** Fixed-width sidebar for non-homepage routes
-
----
-
-#### `frontend/src/components/layout/index.ts`
-- **Path:** `frontend/src/components/layout/index.ts`
-- **Purpose:** Barrel export for layout components
-- **Exports:** Sidebar, Header, ConditionalLayout
-
----
-
 ### 🔷 **Library (`src/lib/`)**
 
 #### `frontend/src/lib/api.ts`
@@ -1015,7 +959,6 @@ type SearchMode = 'lexical' | 'semantic' | 'hybrid';
   - ✅ Server Components capability (future)
   - ✅ Better code splitting
   - ✅ Built-in Suspense support
-  - ✅ Layout system
 
 ### **2. Client Components (`'use client'`)**
 - **Decision:** Most components are client-side
@@ -1150,11 +1093,6 @@ All Components
 - **Impact:** Consistent design language
 - **Usage:** Chat bubbles, input boxes, cards
 
-### **6. Conditional Layout System**
-- **File:** `ConditionalLayout.tsx`
-- **Feature:** Full-page for homepage, sidebar for others
-- **Why:** Different UX for different pages
-- **Impact:** Homepage feels full-screen, others have navigation
 
 ### **7. Type-Safe API Client**
 - **File:** `lib/api.ts`

@@ -16,24 +16,20 @@ export default function ChatMessage({ message }: ChatMessageProps) {
   return (
     <div className={`flex gap-6 ${isUser ? 'justify-end' : ''}`}>
       
-      {/* AI Avatar */}
       {!isUser && (
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0 mt-1 shadow-lg shadow-indigo-500/20 border border-indigo-400/20">
           <Sparkles size={18} className="text-white" />
         </div>
       )}
 
-      {/* Message Content */}
       <div className="flex-1 max-w-3xl space-y-4">
         
-        {/* GLASS BUBBLE */}
         <div className={`p-6 rounded-2xl backdrop-blur-md border relative ${
           isUser 
             ? 'bg-slate-800/60 border-white/5 text-white rounded-tr-none' 
             : 'bg-slate-900/50 border-white/10 text-slate-300 rounded-tl-none shadow-[0_0_40px_-10px_rgba(79,70,229,0.1)]'
         }`}>
           
-          {/* Loading State */}
           {message.isLoading ? (
             <div className="flex items-center gap-3">
               <Loader2 size={18} className="animate-spin text-indigo-400" />
@@ -48,15 +44,12 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             <>
               <p className="leading-relaxed text-[15px] whitespace-pre-wrap">{message.content}</p>
 
-              {/* Fund Analysis Results */}
               {message.data?.funds && message.data.funds.length > 0 && (
                 <FundAnalysisResults funds={message.data.funds} />
               )}
 
-              {/* RAG Data Payload */}
               {message.data && (
                 <div className="mt-8 space-y-6">
-                  {/* Confidence Bar */}
                   {message.data.confidence !== undefined && (
                     <div className="flex items-center gap-3 text-xs text-slate-500 pt-2">
                       <span>Confidence:</span>
@@ -78,7 +71,6 @@ export default function ChatMessage({ message }: ChatMessageProps) {
           )}
         </div>
 
-        {/* Citations */}
         {!isUser && message.data?.citations && message.data.citations.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 pl-1 pt-1">
             <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mr-2">
@@ -96,7 +88,6 @@ export default function ChatMessage({ message }: ChatMessageProps) {
         )}
       </div>
 
-      {/* User Avatar */}
       {isUser && (
         <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center flex-shrink-0 mt-1">
           <span className="text-xs font-bold text-slate-400">YOU</span>

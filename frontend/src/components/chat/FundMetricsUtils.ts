@@ -1,7 +1,3 @@
-/**
- * Utility functions for fund metrics visualization
- */
-
 export const getSharpeContext = (value?: number) => {
   if (value === undefined || value === null) return { label: 'N/A', color: 'text-slate-500', bg: 'bg-slate-500' };
   if (value >= 2.0) return { label: 'Excellent', color: 'text-emerald-400', bg: 'bg-emerald-500' };

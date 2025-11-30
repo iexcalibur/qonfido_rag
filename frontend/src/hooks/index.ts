@@ -1,7 +1,3 @@
-// =============================================================================
-// Qonfido RAG - Custom Hooks
-// =============================================================================
-
 import { useState, useCallback, useRef } from 'react';
 import { sendQuery, getFunds, getFundById, checkHealth } from '@/lib/api';
 import type { 
@@ -16,10 +12,6 @@ import type {
 } from '@/types';
 import { generateId } from '@/lib/utils';
 
-// =============================================================================
-// useChat Hook - Connected to Backend API
-// =============================================================================
-
 interface UseChatReturn {
   messages: ChatMessage[];
   isLoading: boolean;
@@ -32,20 +24,17 @@ export function useChat(): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isRequestInFlight = useRef(false); // Prevent duplicate sends
+  const isRequestInFlight = useRef(false);
 
   const sendMessage = useCallback(async (content: string, searchMode: SearchMode = 'hybrid') => {
-    // Prevent sending if already processing or empty content
     if (!content.trim() || isRequestInFlight.current) return;
 
-    // Create user message
     const userMessage: ChatMessage = {
       id: generateId(),
       sender: 'user',
       content: content.trim(),
     };
 
-    // Create placeholder AI message with loading state
     const aiMessageId = generateId();
     const aiMessage: ChatMessage = {
       id: aiMessageId,
@@ -54,14 +43,12 @@ export function useChat(): UseChatReturn {
       isLoading: true,
     };
 
-    // Mark request as in flight to prevent duplicates
     isRequestInFlight.current = true;
     setMessages((prev) => [...prev, userMessage, aiMessage]);
     setIsLoading(true);
     setError(null);
 
     try {
-      // Call the backend API
       const request: QueryRequest = {
         query: content.trim(),
         search_mode: searchMode,
@@ -71,7 +58,6 @@ export function useChat(): UseChatReturn {
 
       const response: QueryResponse = await sendQuery(request);
 
-      // Transform funds to metrics for display
       const metrics: MessageMetric[] = response.funds.slice(0, 3).map((fund) => ({
         label: fund.fund_name.length > 18 
           ? fund.fund_name.slice(0, 18) + '...' 
@@ -86,14 +72,12 @@ export function useChat(): UseChatReturn {
           : 'neutral' as const,
       }));
 
-      // Transform sources to citations
       const citations: MessageCitation[] = response.sources.slice(0, 4).map((src, idx) => ({
         id: idx,
         title: src.source === 'fund' ? `Fund: ${src.id}` : `FAQ: ${src.id.slice(0, 20)}...`,
         score: src.score,
       }));
 
-      // Update AI message with response
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === aiMessageId
@@ -107,7 +91,6 @@ export function useChat(): UseChatReturn {
                     ? `${response.query_type.charAt(0).toUpperCase() + response.query_type.slice(1)} Analysis` 
                     : undefined,
                   citations: citations.length > 0 ? citations : undefined,
-                  // Keep raw data too
                   funds: response.funds,
                   sources: response.sources,
                   confidence: response.confidence,
@@ -135,22 +118,18 @@ export function useChat(): UseChatReturn {
       );
     } finally {
       setIsLoading(false);
-      isRequestInFlight.current = false; // Allow new requests
+      isRequestInFlight.current = false;
     }
   }, []);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
-    isRequestInFlight.current = false; // Reset on clear
+    isRequestInFlight.current = false;
   }, []);
 
   return { messages, isLoading, error, sendMessage, clearMessages };
 }
-
-// =============================================================================
-// useFunds Hook
-// =============================================================================
 
 interface UseFundsReturn {
   funds: FundListResponse | null;
@@ -181,10 +160,6 @@ export function useFunds(): UseFundsReturn {
   return { funds, isLoading, error, fetchFunds };
 }
 
-// =============================================================================
-// useFundDetail Hook
-// =============================================================================
-
 interface UseFundDetailReturn {
   fund: FundDetail | null;
   isLoading: boolean;
@@ -213,10 +188,6 @@ export function useFundDetail(): UseFundDetailReturn {
 
   return { fund, isLoading, error, fetchFund };
 }
-
-// =============================================================================
-// useHealth Hook
-// =============================================================================
 
 interface UseHealthReturn {
   isHealthy: boolean | null;

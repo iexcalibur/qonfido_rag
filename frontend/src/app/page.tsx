@@ -23,12 +23,8 @@ export default function HomePage() {
 
   const { isHealthy, isChecking, checkAPI } = useHealth();
 
-  // Check backend health on mount and periodically
-
   useEffect(() => {
     checkAPI();
-
-    // Check health every 30 seconds
 
     const interval = setInterval(checkAPI, 30000);
 
@@ -51,21 +47,13 @@ export default function HomePage() {
 
   return (
     <div className="h-screen w-full relative overflow-hidden flex flex-col font-sans text-white selection:bg-indigo-500/30 bg-slate-950">
-      {/* --- BACKGROUND EFFECTS --- */}
-
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
 
-      {/* Top Right Blob */}
-
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-violet-900/10 blur-[120px] pointer-events-none"></div>
-
-      {/* The Horizon Glow */}
 
       <div className="absolute bottom-[-20%] left-[-20%] right-[-20%] h-[500px] bg-indigo-600/20 blur-[120px] rounded-[100%] pointer-events-none"></div>
 
       <main className="relative z-10 h-full w-full flex flex-col items-center justify-center px-4 text-center">
-        {/* Backend Status Indicator */}
-
         <div
           className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all bg-slate-900/60 backdrop-blur-md border border-white/10 select-none"
           style={{ pointerEvents: "auto" }}
@@ -107,17 +95,11 @@ export default function HomePage() {
           </span>
         </p>
 
-        {/* --- GLASS INPUT BOX --- */}
-
         <form
           onSubmit={handleSubmit}
           className="w-full max-w-3xl relative group"
         >
-          {/* Glow Behind - CHANGED: Removed 'group-hover:opacity-40' so it doesn't brighten on hover */}
-
           <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 rounded-3xl opacity-20 blur-xl transition duration-1000"></div>
-
-          {/* Main Glass Container */}
 
           <div className="relative bg-slate-900/60 backdrop-blur-md rounded-3xl p-2 flex flex-col md:flex-row items-center shadow-2xl">
             <div className="flex-1 w-full">

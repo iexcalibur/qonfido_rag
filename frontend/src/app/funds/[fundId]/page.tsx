@@ -1,5 +1,3 @@
-// src/app/funds/[fundId]/page.tsx
-
 'use client';
 
 import React, { useEffect } from 'react';
@@ -55,15 +53,11 @@ export default function FundDetailPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] w-full bg-slate-950 text-slate-200 py-8 relative overflow-hidden">
       
-      {/* Background Ambience */}
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-violet-900/10 blur-[120px] pointer-events-none" />
       <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-indigo-900/10 blur-[120px] pointer-events-none" />
 
       <main className="max-w-5xl mx-auto px-6 relative z-10">
         
-       
-
-        {/* Header Card */}
         <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-8 mb-8 mt-10">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
             <div>
@@ -94,10 +88,7 @@ export default function FundDetailPage() {
           </div>
         </div>
 
-        {/* Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          
-          {/* Returns Section */}
           {fund.cagr_1yr !== undefined && fund.cagr_1yr !== null && (
             <MetricBox 
               label="1Y Returns" 
@@ -120,7 +111,6 @@ export default function FundDetailPage() {
             />
           )}
           
-          {/* Risk Metrics Section */}
           {fund.sharpe_ratio !== undefined && fund.sharpe_ratio !== null && (
             <MetricBox 
               label="Sharpe Ratio" 
@@ -155,7 +145,6 @@ export default function FundDetailPage() {
             />
           )}
           
-          {/* Fund Details (Fixed the Crash Here) */}
           {fund.aum !== undefined && fund.aum !== null && (
             <MetricBox 
               label="AUM" 
@@ -176,7 +165,6 @@ export default function FundDetailPage() {
           )}
         </div>
 
-        {/* Additional Info Section */}
         {fund.sub_category && (
           <div className="bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-xl p-6">
             <h3 className="text-lg font-semibold text-white mb-4">Fund Details</h3>
@@ -185,7 +173,6 @@ export default function FundDetailPage() {
                 <span className="text-sm text-slate-500 block mb-1">Sub-Category</span>
                 <p className="text-slate-200 font-medium">{fund.sub_category}</p>
               </div>
-              {/* You can add more text details here if available in your API */}
             </div>
           </div>
         )}
@@ -194,7 +181,6 @@ export default function FundDetailPage() {
   );
 }
 
-// Sub-component for individual metric cards
 function MetricBox({ 
   label, 
   value, 

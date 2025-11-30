@@ -123,19 +123,14 @@ qonfido-rag/
 │   │   ├── 📁 components/                # React Components
 │   │   │   ├── 📄 Header.tsx             # Main navigation header
 │   │   │   │
-│   │   │   ├── 📁 chat/                  # Chat-related components
-│   │   │   │   ├── 📄 ChatInput.tsx      # Chat input with search mode
-│   │   │   │   ├── 📄 ChatMessage.tsx    # Individual chat message
-│   │   │   │   ├── 📄 CitationChip.tsx   # Source citation badge
-│   │   │   │   ├── 📄 FundAnalysisResults.tsx  # Fund metrics grid
-│   │   │   │   ├── 📄 FundInsightCard.tsx      # Individual fund card
-│   │   │   │   ├── 📄 FundMetricsUtils.ts      # Metric utility functions
-│   │   │   │   ├── 📄 WelcomeMessage.tsx # Welcome screen
-│   │   │   │   └── 📄 index.ts           # Component exports
-│   │   │   │
-│   │   │   └── 📁 layout/                # Layout components
-│   │   │       ├── 📄 ConditionalLayout.tsx    # Conditional layout wrapper
-│   │   │       ├── 📄 Header.tsx         # Alternative header
+│   │   │   └── 📁 chat/                  # Chat-related components
+│   │   │       ├── 📄 ChatInput.tsx      # Chat input with search mode
+│   │   │       ├── 📄 ChatMessage.tsx    # Individual chat message
+│   │   │       ├── 📄 CitationChip.tsx   # Source citation badge
+│   │   │       ├── 📄 FundAnalysisResults.tsx  # Fund metrics grid
+│   │   │       ├── 📄 FundInsightCard.tsx      # Individual fund card
+│   │   │       ├── 📄 FundMetricsUtils.ts      # Metric utility functions
+│   │   │       ├── 📄 WelcomeMessage.tsx # Welcome screen
 │   │   │       └── 📄 index.ts           # Component exports
 │   │   │
 │   │   ├── 📁 lib/                       # Utility Libraries
@@ -235,7 +230,6 @@ qonfido-rag/
 
 #### `src/components/` - React Components
 - **`chat/`**: Chat interface components (input, messages, citations, fund results)
-- **`layout/`**: Layout and navigation components
 - **`Header.tsx`**: Main navigation header
 
 #### `src/lib/` - Utility Libraries

@@ -68,7 +68,6 @@ export default function FundsPage() {
     
     if (selectedFilter && matches) {
       const filter = selectedFilter.toLowerCase();
-      // Match by category (case-insensitive partial match)
       matches = (fund.category?.toLowerCase().includes(filter) ?? false);
     }
     
@@ -82,13 +81,11 @@ export default function FundsPage() {
   return (
     <div className="min-h-screen w-full bg-slate-950 text-slate-200 pt-24 pb-10 relative overflow-hidden">
       
-      {/* --- BACKGROUND AMBIENCE --- */}
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-violet-900/10 blur-[120px] pointer-events-none"></div>
       <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-indigo-900/10 blur-[120px] pointer-events-none"></div>
 
       <main className="max-w-7xl mx-auto px-6 relative z-10">
-        
-        {/* Header */}
+
         <div className="mb-10">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
@@ -109,7 +106,6 @@ export default function FundsPage() {
           </div>
         </div>
 
-        {/* Glass Search Bar */}
         <div className="mb-8 flex flex-col md:flex-row gap-4">
           <div className="relative flex-1 group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-xl opacity-20 blur group-hover:opacity-40 transition duration-500"></div>
@@ -128,7 +124,6 @@ export default function FundsPage() {
             </div>
           </div>
           
-          {/* Glass Filters */}
           <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
             {['Large Cap', 'Small Cap','Hybrid', 'Flexi', 'Debt', 'Index', 'ELSS'].map((filter) => (
               <button 
@@ -146,7 +141,6 @@ export default function FundsPage() {
           </div>
         </div>
 
-        {/* Loading State */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 size={32} className="animate-spin text-indigo-500 mb-4" />
@@ -154,7 +148,6 @@ export default function FundsPage() {
           </div>
         )}
 
-        {/* Error State */}
         {error && !isLoading && (
           <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-8 text-center">
             <p className="text-rose-400 mb-2 font-medium">Failed to load funds</p>
@@ -166,12 +159,10 @@ export default function FundsPage() {
           </div>
         )}
 
-        {/* Glass Funds Grid */}
         {!isLoading && !error && filteredFunds && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredFunds.map((fund) => (
               <div key={fund.id} className="group relative block">
-                {/* Glow Behind Card */}
                 <div className="absolute -inset-0.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl opacity-0 group-hover:opacity-30 blur-lg transition duration-500"></div>
 
                 <div className="relative bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-2xl p-6 hover:bg-slate-800/40 transition-all duration-300 overflow-hidden shadow-xl h-full">
@@ -241,7 +232,6 @@ export default function FundsPage() {
           </div>
         )}
 
-        {/* Empty State */}
         {!isLoading && !error && filteredFunds?.length === 0 && (
           <div className="text-center py-20">
             <p className="text-slate-400 mb-4">No funds found matching your criteria.</p>
@@ -251,7 +241,6 @@ export default function FundsPage() {
           </div>
         )}
 
-        {/* Results Count */}
         {!isLoading && !error && filteredFunds && filteredFunds.length > 0 && (
           <div className="mt-8 text-center text-sm text-slate-500">
             Showing {filteredFunds.length} of {funds?.total || 0} funds

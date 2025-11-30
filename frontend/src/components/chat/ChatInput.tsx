@@ -28,10 +28,8 @@ export default function ChatInput({ onSubmit, isLoading, placeholder }: ChatInpu
       <div className="bg-slate-950/0 px-4 pb-6 pt-2">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative group">
           
-          {/* Glow Behind Input */}
           <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 rounded-2xl opacity-10 blur-xl group-hover:opacity-30 transition duration-500" />
           
-          {/* Settings Panel */}
           {showSettings && (
             <div className="absolute bottom-full mb-2 left-0 right-0 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
@@ -51,7 +49,6 @@ export default function ChatInput({ onSubmit, isLoading, placeholder }: ChatInpu
                     type="button"
                     onClick={() => {
                       setSearchMode(mode);
-                      // Keep panel open so user can see the change
                     }}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                       searchMode === mode
@@ -101,7 +98,6 @@ export default function ChatInput({ onSubmit, isLoading, placeholder }: ChatInpu
                       ? 'text-indigo-400 bg-indigo-500/10' 
                       : 'text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10'
                   }`}
-                  title="Search settings"
                 >
                   <Settings2 size={18} />
                 </button>

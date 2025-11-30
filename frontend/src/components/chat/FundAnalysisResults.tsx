@@ -25,8 +25,7 @@ export default function FundAnalysisResults({ funds }: FundAnalysisResultsProps)
         <BarChart2 size={14} className="text-indigo-400" />
         <h4 className="text-xs font-semibold text-indigo-200 uppercase tracking-wider">Analysis Results</h4>
       </div>
-      
-      {/* GRID OF CARDS */}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {funds.slice(0, 4).map((fund, idx) => (
           <FundInsightCard key={idx} fund={fund} />

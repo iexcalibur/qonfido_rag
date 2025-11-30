@@ -28,7 +28,7 @@ export default function FundInsightCard({ fund }: FundInsightCardProps) {
 
   return (
     <div className="bg-slate-900/60 backdrop-blur-md border border-white/5 rounded-xl p-4 hover:border-indigo-500/30 transition-all group">
-      {/* Header */}
+      
       <div className="flex justify-between items-start mb-4">
         <h5 className="text-sm font-semibold text-white leading-tight max-w-[80%] group-hover:text-indigo-300 transition-colors">
           {fundName}
@@ -40,10 +40,8 @@ export default function FundInsightCard({ fund }: FundInsightCardProps) {
         )}
       </div>
 
-      {/* Grid Layout for Metrics */}
       <div className="grid grid-cols-3 gap-2">
-        
-        {/* Metric 1: CAGR (Growth) */}
+
         <div className="bg-slate-800/30 rounded-lg p-2 flex flex-col justify-between border border-white/5">
           <div className="flex items-center gap-1 mb-1">
             <TrendingUp size={12} className="text-slate-500" />
@@ -59,7 +57,6 @@ export default function FundInsightCard({ fund }: FundInsightCardProps) {
           </div>
         </div>
 
-        {/* Metric 2: Sharpe (Risk-Adj Return) */}
         <div className="bg-slate-800/30 rounded-lg p-2 flex flex-col justify-between border border-white/5">
           <div className="flex items-center gap-1 mb-1">
             <Activity size={12} className="text-slate-500" />
@@ -69,7 +66,7 @@ export default function FundInsightCard({ fund }: FundInsightCardProps) {
             <div className={`text-sm font-bold ${sharpeCtx.color}`}>
               {sharpe ? sharpe.toFixed(2) : '-'}
             </div>
-            {/* Visual Bar for Sharpe */}
+
             <div className="h-1 w-full bg-slate-700 rounded-full mt-1.5 overflow-hidden">
               <div 
                 className={`h-full ${sharpeCtx.bg}`} 
@@ -80,7 +77,6 @@ export default function FundInsightCard({ fund }: FundInsightCardProps) {
           </div>
         </div>
 
-        {/* Metric 3: Volatility (Risk) */}
         <div className="bg-slate-800/30 rounded-lg p-2 flex flex-col justify-between border border-white/5">
           <div className="flex items-center gap-1 mb-1">
             <ShieldAlert size={12} className="text-slate-500" />
