@@ -394,34 +394,3 @@ cp .env.example .env.local
 npm run dev
 ```
 
-## 🐛 Troubleshooting
-
-**Model Download Takes Too Long**
-- BGE-M3 model (~2.3GB) downloads on first run (one-time)
-- Ensure stable internet connection
-
-**No Documents Loaded**
-- Verify CSV files exist in `backend/data/raw/`
-- Check file names match settings (`faqs.csv`, `funds.csv`)
-
-**Empty Search Results**
-- Run data ingestion: `python -m scripts.ingest_data`
-- Check indexes are built (look for "Indexed X documents" in logs)
-
-**Slow Query Responses**
-- First query includes model loading (one-time)
-- Enable caching (already enabled by default)
-- Use smaller embedding model: `EMBEDDING_MODEL=all-MiniLM-L6-v2`
-
-See [Troubleshooting Guide](README.md#-troubleshooting) for more solutions.
-
-## 📝 License
-
-This project was created for the Qonfido AI Co-Pilot assignment.
-
-## 🙏 Acknowledgments
-
-- [Anthropic](https://anthropic.com) - Claude API
-- [Cohere](https://cohere.com) - Reranking API
-- [ChromaDB](https://trychroma.com) - Vector Store
-- [Sentence Transformers](https://sbert.net) - Embeddings
