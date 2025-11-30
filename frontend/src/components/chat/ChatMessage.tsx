@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
-import MetricCard from './MetricCard';
 import CitationChip from './CitationChip';
 import FundAnalysisResults from './FundAnalysisResults';
 import type { ChatMessage as ChatMessageType } from '@/types';
@@ -57,17 +56,6 @@ export default function ChatMessage({ message }: ChatMessageProps) {
               {/* RAG Data Payload */}
               {message.data && (
                 <div className="mt-8 space-y-6">
-                  
-                  {/* Metrics Grid */}
-                  {message.data.metrics && message.data.metrics.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {message.data.metrics.map((m, idx) => (
-                        <MetricCard key={idx} {...m} />
-                      ))}
-                    </div>
-                  )}
-                  
-
                   {/* Confidence Bar */}
                   {message.data.confidence !== undefined && (
                     <div className="flex items-center gap-3 text-xs text-slate-500 pt-2">

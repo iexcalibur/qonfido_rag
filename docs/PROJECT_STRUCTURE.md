@@ -130,7 +130,6 @@ qonfido-rag/
 │   │   │   │   ├── 📄 FundAnalysisResults.tsx  # Fund metrics grid
 │   │   │   │   ├── 📄 FundInsightCard.tsx      # Individual fund card
 │   │   │   │   ├── 📄 FundMetricsUtils.ts      # Metric utility functions
-│   │   │   │   ├── 📄 MetricCard.tsx     # Generic metric card
 │   │   │   │   ├── 📄 WelcomeMessage.tsx # Welcome screen
 │   │   │   │   └── 📄 index.ts           # Component exports
 │   │   │   │

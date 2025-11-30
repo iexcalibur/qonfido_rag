@@ -120,10 +120,6 @@ Chat-specific components:
   - Key metrics display
   - Visual indicators (risk level, performance)
 
-- **`MetricCard.tsx`**:
-  - Reusable metric display component
-  - Value, label, trend indicator
-
 - **`FundMetricsUtils.ts`**:
   - Utility functions for fund metrics
   - Formatting helpers

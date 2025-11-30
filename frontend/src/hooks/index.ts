@@ -2,7 +2,7 @@
 // Qonfido RAG - Custom Hooks
 // =============================================================================
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { sendQuery, getFunds, getFundById, checkHealth } from '@/lib/api';
 import type { 
   QueryRequest, 
@@ -32,9 +32,11 @@ export function useChat(): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isRequestInFlight = useRef(false); // Prevent duplicate sends
 
   const sendMessage = useCallback(async (content: string, searchMode: SearchMode = 'hybrid') => {
-    if (!content.trim()) return;
+    // Prevent sending if already processing or empty content
+    if (!content.trim() || isRequestInFlight.current) return;
 
     // Create user message
     const userMessage: ChatMessage = {
@@ -52,6 +54,8 @@ export function useChat(): UseChatReturn {
       isLoading: true,
     };
 
+    // Mark request as in flight to prevent duplicates
+    isRequestInFlight.current = true;
     setMessages((prev) => [...prev, userMessage, aiMessage]);
     setIsLoading(true);
     setError(null);
@@ -131,12 +135,14 @@ export function useChat(): UseChatReturn {
       );
     } finally {
       setIsLoading(false);
+      isRequestInFlight.current = false; // Allow new requests
     }
   }, []);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
+    isRequestInFlight.current = false; // Reset on clear
   }, []);
 
   return { messages, isLoading, error, sendMessage, clearMessages };

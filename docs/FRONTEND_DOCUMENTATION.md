@@ -31,7 +31,6 @@ frontend/
 │   │   │   ├── FundAnalysisResults.tsx # Fund metrics grid
 │   │   │   ├── FundInsightCard.tsx     # Individual fund card
 │   │   │   ├── FundMetricsUtils.ts     # Metric utility functions
-│   │   │   ├── MetricCard.tsx   # Generic metric card
 │   │   │   ├── WelcomeMessage.tsx # Welcome screen
 │   │   │   └── index.ts         # Component exports
 │   │   └── layout/              # Layout components
@@ -390,7 +389,7 @@ frontend/
 - **Key Features:**
   - **Dynamic Routing:** Uses Next.js dynamic route `[fundId]`
   - **Comprehensive Metrics:** All available fund data
-  - **Metric Cards:** Organized display of metrics
+  - **Organized Metrics Display:** Structured fund data presentation
   - **Risk Badges:** Color-coded risk levels
   - **AI Integration:** Direct link to chat about fund
 - **State Management:**
@@ -683,18 +682,6 @@ frontend/
 
 ---
 
-#### `frontend/src/components/chat/MetricCard.tsx`
-- **Path:** `frontend/src/components/chat/MetricCard.tsx`
-- **Purpose:** Generic metric card component (legacy/unused)
-- **What it contains:**
-  - Generic metric display
-  - Label and value
-  - Status indicator
-- **Status:** ⚠️ Appears to be unused/legacy component
-- **Impact:** **Low** - Not currently used in chat interface
-
----
-
 #### `frontend/src/components/chat/index.ts`
 - **Path:** `frontend/src/components/chat/index.ts`
 - **Purpose:** Barrel export file for chat components
@@ -704,7 +691,7 @@ frontend/
 - **Exports:**
   - ChatMessage, ChatInput, CitationChip
   - FundAnalysisResults, FundInsightCard
-  - WelcomeMessage, MetricCard
+  - WelcomeMessage
   - FundMetricsUtils (all functions)
 - **Why it exists:**
   - Clean imports (`@/components/chat` vs long paths)
@@ -1011,7 +998,7 @@ type SearchMode = 'lexical' | 'semantic' | 'hybrid';
 3. useEffect triggers → useFundDetail() hook
 4. API call → lib/api.ts → getFundById()
 5. Response received → FundDetail
-6. Metrics displayed → Metric cards
+6. Metrics displayed → Fund detail view
 7. User clicks "Ask AI" → Navigate to /chat?q=...
 ```
 

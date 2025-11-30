@@ -1,12 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, TrendingUp, ShieldCheck, Activity } from 'lucide-react';
+import { ArrowRight, TrendingUp, ShieldCheck, Activity, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { useHealth } from '@/hooks';
 
 export default function HomePage() {
   const [query, setQuery] = useState('');
   const router = useRouter();
+  const { isHealthy, isChecking, checkAPI } = useHealth();
+
+  useEffect(() => {
+    checkAPI();
+    const interval = setInterval(checkAPI, 30000);
+    return () => clearInterval(interval);
+  }, [checkAPI]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,14 +34,36 @@ export default function HomePage() {
       
       {/* --- BACKGROUND EFFECTS --- */}
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
-      
-      {/* Top Right Blob */}
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-violet-900/10 blur-[120px] pointer-events-none"></div>
-
-      {/* The Horizon Glow */}
       <div className="absolute bottom-[-20%] left-[-20%] right-[-20%] h-[500px] bg-indigo-600/20 blur-[120px] rounded-[100%] pointer-events-none"></div>
 
       <main className="relative z-10 h-full w-full flex flex-col items-center justify-center px-4 text-center">
+        
+        {/* Backend Status */}
+        <div 
+          className="absolute bottom-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all bg-slate-900/60 backdrop-blur-md border border-white/10 select-none"
+          style={{ pointerEvents: 'auto' }}
+        >
+          {isChecking ? (
+            <>
+              <Loader2 size={14} className="animate-spin text-slate-400" />
+              <span className="text-slate-400">Checking...</span>
+            </>
+          ) : isHealthy ? (
+            <>
+              <div className="relative">
+                <Wifi size={14} className="text-emerald-400" />
+                <div className="absolute inset-0 w-3 h-3 bg-emerald-400/20 rounded-full animate-ping"></div>
+              </div>
+              <span className="text-emerald-400">Backend Connected</span>
+            </>
+          ) : (
+            <>
+              <WifiOff size={14} className="text-rose-400" />
+              <span className="text-rose-400">Backend Offline</span>
+            </>
+          )}
+        </div>
         
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400">
           Superhuman <br className="hidden md:block"/> Financial Intelligence
@@ -44,14 +74,24 @@ export default function HomePage() {
           and risk analysis in seconds. <span className="text-indigo-400">Stop searching, start knowing.</span>
         </p>
 
-        {/* --- GLASS INPUT BOX --- */}
-        <form onSubmit={handleSubmit} className="w-full max-w-3xl relative group">
+        {/* --- SEAMLESS GLOW CONTAINER --- */}
+        <form onSubmit={handleSubmit} className="w-full max-w-3xl relative group z-20">
           
-          {/* Glow Behind */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 rounded-3xl opacity-20 blur-xl group-hover:opacity-40 transition duration-1000"></div>
+          {/* THE FIX:
+            1. blur-[60px]: Massive blur destroys all "edges".
+            2. inset-0: Glow stays inside the bounds (bleeding out via blur only).
+            3. opacity-20 -> 50: Only brightness changes, shape remains constant.
+          */}
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 rounded-[2rem] 
+            blur-[60px] 
+            opacity-20 
+            group-hover:opacity-40 
+            group-focus-within:opacity-50 
+            transition-opacity duration-500">
+          </div>
           
-          {/* Main Glass Container */}
-          <div className="relative bg-slate-900/60 backdrop-blur-md border border-white/10 rounded-3xl p-2 flex flex-col md:flex-row items-center shadow-2xl">
+          {/* Main Container - No Borders, No Shadows, Just Background */}
+          <div className="relative bg-slate-900 rounded-[2rem] p-2 flex flex-col md:flex-row items-center">
             <div className="flex-1 w-full">
               <textarea 
                 value={query}
@@ -70,14 +110,14 @@ export default function HomePage() {
             <div className="p-2 w-full md:w-auto flex justify-end">
               <button 
                 type="submit"
-                className="bg-white text-slate-950 hover:bg-indigo-50 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all group-focus-within:shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+                className="bg-white text-slate-950 hover:bg-indigo-50 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-indigo-500/20"
               >
                 Get Started <ArrowRight size={18} />
               </button>
             </div>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-3 mt-6">
+          <div className="flex flex-wrap justify-center gap-3 mt-8">
             {[
               { label: "Analyze Axis Bluechip", icon: TrendingUp },
               { label: "Compare HDFC vs SBI", icon: Activity },
