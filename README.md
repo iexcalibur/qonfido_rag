@@ -26,6 +26,17 @@ This system goes beyond simple text matching by handling **structured financial 
 
 ## 🏗️ Architecture
 
+### System Overview
+
+The system follows a **layered architecture** pattern with clear separation of concerns:
+
+```
+Client Layer (Next.js) → API Gateway (FastAPI) → Application Layer (RAG Pipeline) 
+  → Retrieval Layer (Hybrid Search) → Generation Layer (Claude) → Data Layer
+```
+
+### Architecture Flow
+
 ```mermaid
 flowchart TB
     User[User] --> Frontend[Next.js Frontend]
@@ -79,19 +90,79 @@ flowchart TB
     style StateFile fill:#f3e5f5
 ```
 
+### Key Architectural Patterns
+
+1. **Layered Architecture**: Separation of concerns (API → Application → Domain → Infrastructure)
+2. **Pipeline Pattern**: Sequential processing (Query → Retrieve → Generate → Respond)
+3. **Strategy Pattern**: Multiple retrieval strategies (Lexical, Semantic, Hybrid) selectable at runtime
+4. **Singleton Pattern**: Global instances for expensive components (embedder, models)
+
+### Design Decisions
+
+#### Why Hybrid Search?
+- **Lexical (BM25)**: Excellent for exact keyword matching (fund names, metrics)
+- **Semantic (Vector)**: Handles paraphrasing and conceptual queries
+- **RRF Fusion**: Combines both optimally without training data
+- **Parallel Execution**: 40-50% latency reduction vs sequential
+
+#### Why ChromaDB?
+- **Simplicity**: No server needed (in-process), faster development
+- **Sufficient Scale**: Handles MVP scale (thousands of documents) efficiently
+- **Persistence**: Built-in with minimal configuration
+- **Trade-off**: Less scalable than distributed Qdrant, but simpler for MVP
+
+#### Why BGE-M3 (Local) over API?
+- **Cost**: Free (no per-request charges)
+- **Privacy**: Data never leaves the system
+- **Latency**: No network round-trip
+- **Trade-off**: Larger model size (~2.3GB), slower initial load
+
+#### Why Hash-Based Persistence?
+- **Fast Startup**: ~5-10 seconds if data unchanged vs 2-4 minutes to re-index
+- **Automatic Detection**: Detects data/config changes via MD5 hash
+- **Developer Experience**: No manual cache invalidation needed
+
+#### Why Multi-Level Caching?
+- **Embedding Cache (24hr)**: Prevents redundant model inference
+- **Query Cache (5min)**: Instant responses for repeated queries (100x faster)
+- **Performance Impact**: First query ~2-4s, cached query ~50ms
+
+### Scalability
+
+**Current Scale (MVP)**:
+- Documents: ~100-1000 documents (FAQs + Funds)
+- Queries: ~10-100 queries/minute
+- Architecture: Single instance, vertical scaling
+
+**Scaling Path**:
+1. **Vertical Scaling**: Larger instance (up to ~10K docs, ~1K qpm)
+2. **Horizontal Scaling**: Multiple instances + shared services (Redis, Qdrant server)
+3. **Distributed**: Sharding + read replicas for enterprise scale
+
+The architecture is **production-ready for MVP scale** with a **clear path to enterprise scale**.
+
+📖 **For detailed architecture documentation, see [Architecture & Design Decisions](docs/ARCHITECTURE_AND_DESIGN_DECISIONS.md)**
+
 ## 🛠️ Tech Stack
 
-| Layer | Component | Technology |
-|-------|-----------|------------|
-| **Frontend** | Framework | **Next.js 16** (App Router) |
-| | Styling | **Tailwind CSS** + Radix UI |
-| | State | React Query + Custom Hooks |
-| **Backend** | API | **FastAPI** + Pydantic |
-| | Embeddings | **BGE-M3** (1024-dim) |
-| | Vector Store | **ChromaDB** (In-Process) |
-| | LLM | **Anthropic Claude 3** |
-| **Data** | Storage | SQLite + CSV |
-| | Cache | In-Memory (TTL-based) |
+### Technology Choices & Justifications
+
+| Layer | Component | Technology | Rationale |
+|-------|-----------|------------|-----------|
+| **Frontend** | Framework | **Next.js 16** (App Router) | Modern React framework, excellent DX, SSR support |
+| | Styling | **Tailwind CSS** + Radix UI | Utility-first CSS, accessible components |
+| | State | React Query + Custom Hooks | Efficient data fetching, caching |
+| **Backend** | API | **FastAPI** + Pydantic | High performance, async support, auto-docs |
+| | Embeddings | **BGE-M3** (1024-dim) | Top quality, free, multilingual support |
+| | Vector Store | **ChromaDB** (In-Process) | Simple setup, built-in persistence, Python-native |
+| | LLM | **Anthropic Claude 3** | Top-tier quality, excellent context handling |
+| | Lexical Search | **BM25** | Fast, proven algorithm, no training needed |
+| | Reranking | **Cohere** (Optional) | Better ranking, graceful fallback if unavailable |
+| **Data** | Storage | CSV + ChromaDB | Simple, sufficient for MVP |
+| | Cache | In-Memory (TTL-based) | Fast, simple, upgradeable to Redis later |
+| | Persistence | Hash-based state | Fast startup, automatic change detection |
+
+**Design Philosophy**: Prioritize simplicity and developer experience for MVP, with clear migration paths for production scale.
 
 ## 🚀 Quick Start (Recommended)
 
@@ -144,25 +215,71 @@ Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 
 ### 1. 🔢 Numerical-to-Text Ingestion
 
-Standard embedding models struggle with raw numbers. We solve this by converting structured fund metrics into rich semantic text descriptions during ingestion.
+**Problem**: Standard embedding models struggle with raw numbers, making it hard to search over structured financial metrics.
+
+**Solution**: Convert structured fund metrics into rich semantic text descriptions during ingestion, enabling semantic search over numerical data.
 
 - *Raw:* `{"sharpe": 1.25, "cagr": 15.2}`
 - *Indexed:* `"Fund X has a 3-year CAGR of 15.2% and a Sharpe Ratio of 1.25..."`
 
-This enables semantic search over numerical data, allowing queries like *"funds with excellent risk-adjusted returns"* to find funds with high Sharpe ratios.
+**Impact**: Allows queries like *"funds with excellent risk-adjusted returns"* to find funds with high Sharpe ratios through semantic understanding.
 
-### 2. ⚡ Parallel Hybrid Search
+---
 
-We employ a **ThreadPoolExecutor** strategy to run BM25 (Lexical) and ChromaDB (Semantic) searches simultaneously, reducing retrieval latency by **40-50%** compared to sequential execution.
+### 2. ⚡ Parallel Hybrid Search with RRF Fusion
 
-### 3. 🚀 Active Caching Layer
+**Architecture**: Combines BM25 (lexical) and ChromaDB (semantic) search using Reciprocal Rank Fusion (RRF).
 
-The system features a multi-layer, fully integrated caching system enabled by default:
+**Innovation**: 
+- **Parallel Execution**: ThreadPoolExecutor runs both searches simultaneously
+- **40-50% Latency Reduction**: vs sequential execution
+- **Optimal Ranking**: RRF combines strengths of both methods without training data
 
-- **Embedding Cache (24h TTL):** Hashes text inputs to prevent redundant model inference.
-- **Query Cache (5m TTL):** Instant responses for repeated questions.
+**Why RRF?**: No training required, proven effectiveness, simple implementation.
 
-This means second queries are **100x faster** (~50ms vs ~2-4s).
+---
+
+### 3. 🚀 Multi-Level Caching System
+
+**Design**: Two-tier caching strategy optimized for different use cases.
+
+- **Embedding Cache (24h TTL):**
+  - Hashes text inputs to prevent redundant model inference
+  - Significant cost/performance savings (BGE-M3 inference is expensive)
+  
+- **Query Cache (5m TTL):**
+  - Instant responses for repeated questions
+  - Includes search mode and parameters in cache key
+
+**Performance Impact**: 
+- First query: ~2-4s
+- Cached query: ~50ms (**100x faster**)
+- Embedding cache hit: ~10ms
+
+---
+
+### 4. 🎯 Hash-Based Smart Persistence
+
+**Innovation**: MD5 hash of data files + config to detect changes automatically.
+
+**Benefits**:
+- **Fast Startup**: ~5-10 seconds if data unchanged vs 2-4 minutes to re-index
+- **Automatic Detection**: No manual cache invalidation needed
+- **Robustness**: Falls back to re-indexing if persistence corrupted
+
+**Implementation**: Stores hash in `data/index.state`, skips expensive embedding/indexing step if unchanged.
+
+---
+
+### 5. 🔄 Graceful Degradation
+
+**Design Philosophy**: System works with optional components, degrades gracefully.
+
+- **Cohere Reranking**: Optional, improves ranking but not required
+- **API Keys**: Features work without optional keys (embedding cache, query cache still functional)
+- **Error Handling**: Comprehensive error handling with safe fallbacks
+
+**Benefit**: Better developer experience, easier setup, production resilience.
 
 ---
 
@@ -266,10 +383,14 @@ qonfido-rag/
 └── Makefile                    # Automation commands
 ```
 
-Detailed documentation:
-- [Backend Architecture](docs/BACKEND_DOCUMENTATION.md)
-- [Frontend Architecture](docs/FRONTEND_DOCUMENTATION.md)
-- [Data Flow Diagrams](docs/DATA_FLOW_DIAGRAMS.md)
+### Detailed Documentation
+
+- **[Architecture & Design Decisions](docs/ARCHITECTURE_AND_DESIGN_DECISIONS.md)** - Comprehensive architecture, design reasoning, trade-offs, and scalability
+- [Backend Architecture](docs/BACKEND_DOCUMENTATION.md) - Backend implementation details
+- [Frontend Architecture](docs/FRONTEND_DOCUMENTATION.md) - Frontend implementation details
+- [Deep Architecture](docs/DEEP_ARCHITECTURE.md) - Technical deep-dive
+- [Data Flow Diagrams](docs/DATA_FLOW_DIAGRAMS.md) - Visual flow diagrams
+- [Project Structure](docs/PROJECT_STRUCTURE.md) - Complete project organization
 
 
 ## 🧪 Testing & Evaluation
