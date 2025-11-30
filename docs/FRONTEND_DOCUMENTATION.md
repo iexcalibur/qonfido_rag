@@ -294,7 +294,7 @@ frontend/
   - **Suspense Wrapper:** Handles Next.js navigation loading
   - **URL Query Parameters:** Supports `/chat?q=query` for pre-filled queries
   - **Double-Run Prevention:** Uses `useRef` to prevent double execution in React StrictMode
-  - **Message Management:** State management for chat messages
+  - **Message Management:** Uses `useChat()` hook for state management
   - **Auto-scroll:** Automatically scrolls to bottom on new messages
   - **Background Effects:** Ambient gradient blobs
 - **Component Structure:**
@@ -305,12 +305,13 @@ frontend/
     └── ChatInput (fixed at bottom)
   ```
 - **State Management:**
-  - `messages` - Array of chat messages
-  - `isLoading` - Loading state for API calls
+  - Uses `useChat()` hook from `@/hooks`
+  - `messages` - Array of chat messages (from hook)
+  - `isLoading` - Loading state for API calls (from hook)
+  - `sendMessage()` - Function to send queries (from hook)
   - `hasProcessedQuery` - Ref to prevent double execution
 - **Key Functions:**
-  - `handleSendMessage()` - Sends query to backend API
-  - `generateId()` - Creates unique message IDs
+  - `sendMessage()` - Sends query to backend API (from useChat hook)
   - URL query handling with `useSearchParams`
 - **Why it exists:**
   - Main user interface for RAG queries
@@ -320,6 +321,7 @@ frontend/
   - **CRITICAL** - Core user interaction
   - All chat functionality flows through here
 - **Key Implementation Details:**
+  - ✅ Uses `useChat()` hook for state management and API calls
   - ✅ Prevents double-execution with `useRef`
   - ✅ Supports URL query parameters
   - ✅ Error handling with user-friendly messages
@@ -970,7 +972,7 @@ type SearchMode = 'lexical' | 'semantic' | 'hybrid';
 ### **Chat Flow:**
 ```
 1. User types query → ChatInput.tsx
-2. User submits → handleSendMessage() in chat/page.tsx
+2. User submits → sendMessage() from useChat hook in chat/page.tsx
 3. API call → lib/api.ts → sendQuery()
 4. Backend processes → RAG pipeline
 5. Response received → QueryResponse
@@ -1112,11 +1114,12 @@ All Components
 - **Impact:** Prevents duplicate API calls
 - **Code:**
   ```typescript
+  const { sendMessage } = useChat();
   const hasProcessedQuery = useRef(false);
   useEffect(() => {
     if (hasProcessedQuery.current || !urlQuery) return;
     hasProcessedQuery.current = true;
-    handleSendMessage(urlQuery);
+    sendMessage(urlQuery);
   }, [urlQuery]);
   ```
 
