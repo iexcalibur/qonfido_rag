@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Prompt Templates
-===============================
-Prompt templates for different query types.
-"""
+"""Prompt templates for different query types."""
 
 
 SYSTEM_PROMPT = """You are a helpful financial assistant for Qonfido, an AI Co-Pilot for Money.
@@ -65,15 +61,7 @@ HYBRID_PROMPT = """Based on the following context (FAQs and fund data), provide 
 
 
 def get_prompt_template(query_type: str) -> str:
-    """
-    Get the appropriate prompt template based on query type.
-    
-    Args:
-        query_type: One of 'faq', 'numerical', or 'hybrid'
-        
-    Returns:
-        Prompt template string
-    """
+    """Get prompt template for query type ('faq', 'numerical', or 'hybrid')."""
     templates = {
         "faq": FAQ_PROMPT,
         "numerical": NUMERICAL_PROMPT,
@@ -87,16 +75,6 @@ def format_prompt(
     context: str,
     query_type: str = "hybrid",
 ) -> str:
-    """
-    Format a prompt with the query and context.
-    
-    Args:
-        query: User's question
-        context: Formatted context string
-        query_type: Type of query for template selection
-        
-    Returns:
-        Formatted prompt string
-    """
+    """Format prompt with query and context using appropriate template."""
     template = get_prompt_template(query_type)
     return template.format(query=query, context=context)

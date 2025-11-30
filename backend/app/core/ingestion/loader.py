@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Data Loader
-==========================
-Load and parse CSV data files for FAQs and Fund Performance.
-"""
+"""Load and parse CSV data files for FAQs and fund performance."""
 
 import logging
 from pathlib import Path
@@ -14,13 +10,8 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 
 
-# =============================================================================
-# Data Models
-# =============================================================================
-
-
 class FAQItem(BaseModel):
-    """Represents a single FAQ entry."""
+    """Single FAQ entry."""
 
     id: str
     question: str
@@ -48,34 +39,27 @@ class FAQItem(BaseModel):
 
 
 class FundData(BaseModel):
-    """Represents mutual fund performance data."""
+    """Mutual fund performance data with metrics."""
 
     id: str
     fund_name: str
     fund_house: str | None = None
     category: str | None = None
     sub_category: str | None = None
-
-    # Performance Metrics
     cagr_1yr: float | None = Field(None, description="1-year CAGR")
     cagr_3yr: float | None = Field(None, description="3-year CAGR")
     cagr_5yr: float | None = Field(None, description="5-year CAGR")
-
-    # Risk Metrics
     volatility: float | None = Field(None, description="Standard deviation of returns")
     sharpe_ratio: float | None = Field(None, description="Sharpe ratio")
     sortino_ratio: float | None = Field(None, description="Sortino ratio")
     max_drawdown: float | None = Field(None, description="Maximum drawdown")
     beta: float | None = Field(None, description="Beta vs benchmark")
     alpha: float | None = Field(None, description="Alpha vs benchmark")
-
-    # Fund Details
     aum: float | None = Field(None, description="Assets Under Management (Cr)")
     expense_ratio: float | None = Field(None, description="Expense ratio (%)")
     nav: float | None = Field(None, description="Current NAV")
     min_investment: float | None = Field(None, description="Minimum investment amount")
     risk_level: str | None = Field(None, description="Risk level: Low/Moderate/High")
-
     source: str = "fund"
 
     @property
@@ -90,7 +74,6 @@ class FundData(BaseModel):
         if self.sub_category:
             parts.append(f"Sub-Category: {self.sub_category}")
 
-        # Performance
         performance_parts = []
         if self.cagr_1yr is not None:
             performance_parts.append(f"1-year CAGR: {self.cagr_1yr:.2f}%")
@@ -101,7 +84,6 @@ class FundData(BaseModel):
         if performance_parts:
             parts.append(f"Performance: {', '.join(performance_parts)}")
 
-        # Risk Metrics
         risk_parts = []
         if self.sharpe_ratio is not None:
             risk_parts.append(f"Sharpe Ratio: {self.sharpe_ratio:.2f}")
@@ -118,7 +100,6 @@ class FundData(BaseModel):
         if risk_parts:
             parts.append(f"Risk Metrics: {', '.join(risk_parts)}")
 
-        # Other Details
         if self.risk_level:
             parts.append(f"Risk Level: {self.risk_level}")
         if self.aum is not None:
@@ -130,7 +111,7 @@ class FundData(BaseModel):
 
     @property
     def metadata(self) -> dict[str, Any]:
-        """Return metadata for filtering in vector store."""
+        """Metadata for filtering in vector store."""
         return {
             "id": self.id,
             "fund_name": self.fund_name,
@@ -158,7 +139,7 @@ class FundData(BaseModel):
 
 
 class DataLoader:
-    """Load data from CSV files."""
+    """Load and parse CSV data files with flexible column matching."""
 
     def __init__(
         self, 
@@ -166,28 +147,12 @@ class DataLoader:
         faqs_file: str = "faqs.csv", 
         funds_file: str = "funds.csv"
     ):
-        """
-        Initialize data loader with configurable file paths.
-        
-        Args:
-            data_dir: Directory containing CSV files
-            faqs_file: Name of FAQs CSV file
-            funds_file: Name of funds CSV file
-        """
         self.data_dir = Path(data_dir)
         self.faqs_file = faqs_file
         self.funds_file = funds_file
 
     def load_faqs(self, filename: str | None = None) -> list[FAQItem]:
-        """
-        Load FAQ data from CSV.
-        
-        Args:
-            filename: Optional override for FAQ filename
-            
-        Returns:
-            List of FAQItem objects
-        """
+        """Load FAQ data from CSV with flexible column matching."""
         if filename is None:
             filename = self.faqs_file
             
@@ -205,7 +170,6 @@ class DataLoader:
 
             faqs = []
             for idx, row in df.iterrows():
-                # Flexible column mapping - try different column names
                 question = self._get_column_value(row, ["question", "Question", "QUESTION", "query", "Query"])
                 answer = self._get_column_value(row, ["answer", "Answer", "ANSWER", "response", "Response"])
                 category = self._get_column_value(row, ["category", "Category", "CATEGORY", "topic", "Topic"])
@@ -228,15 +192,7 @@ class DataLoader:
             raise
 
     def load_funds(self, filename: str | None = None) -> list[FundData]:
-        """
-        Load fund performance data from CSV.
-        
-        Args:
-            filename: Optional override for funds filename
-            
-        Returns:
-            List of FundData objects
-        """
+        """Load fund performance data from CSV with flexible column matching."""
         if filename is None:
             filename = self.funds_file
             
@@ -253,7 +209,6 @@ class DataLoader:
 
             funds = []
             for idx, row in df.iterrows():
-                # Flexible column mapping
                 fund = FundData(
                     id=f"fund_{idx}",
                     fund_name=self._get_column_value(
@@ -315,19 +270,18 @@ class DataLoader:
             raise
 
     def _get_column_value(self, row: pd.Series, column_names: list[str]) -> str | None:
-        """Try to get value from row using multiple possible column names."""
+        """Get value from row using flexible column name matching."""
         for col in column_names:
             if col in row.index and pd.notna(row[col]) and str(row[col]).strip():
                 return str(row[col]).strip()
         return None
 
     def _get_numeric_value(self, row: pd.Series, column_names: list[str]) -> float | None:
-        """Try to get numeric value from row using multiple possible column names."""
+        """Get numeric value from row with percentage string handling."""
         for col in column_names:
             if col in row.index and pd.notna(row[col]):
                 try:
                     value = row[col]
-                    # Handle percentage strings like "12.5%"
                     if isinstance(value, str):
                         value = value.replace("%", "").replace(",", "").strip()
                     return float(value)
@@ -336,13 +290,13 @@ class DataLoader:
         return None
     
     def load_all(self) -> tuple[list[FAQItem], list[FundData]]:
-        """Load all data from CSV files."""
+        """Load all FAQs and funds from CSV files."""
         faqs = self.load_faqs()
         funds = self.load_funds()
         return faqs, funds
     
     def get_all_documents(self) -> list[dict[str, Any]]:
-        """Get all documents in a format ready for indexing."""
+        """Get all documents in format ready for indexing."""
         faqs, funds = self.load_all()
         
         documents = []

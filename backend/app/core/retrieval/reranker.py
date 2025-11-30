@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Reranker
-=======================
-Rerank search results using Cohere Rerank API.
-"""
+"""Rerank search results using Cohere Rerank API."""
 
 import logging
 import os
@@ -16,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class RerankedResult:
-    """Represents a reranked search result."""
+    """Reranked search result with original and rerank scores."""
     
     id: str
     text: str
@@ -29,13 +25,7 @@ class RerankedResult:
 
 
 class Reranker:
-    """
-    Rerank search results using Cohere Rerank API.
-    
-    Two-stage retrieval:
-    1. Fast retrieval (BM25/semantic) to get candidates
-    2. Accurate reranking of candidates
-    """
+    """Rerank search results using Cohere Rerank API for improved accuracy."""
 
     def __init__(
         self,
@@ -44,7 +34,6 @@ class Reranker:
     ):
         self.model = model
         self._client = None
-        # Try: provided key -> settings config -> env var (if available)
         try:
             settings_key = settings.cohere_api_key.get_secret_value() if settings.cohere_api_key else None
         except Exception:
@@ -79,17 +68,7 @@ class Reranker:
         results: list,
         top_k: int = 3,
     ) -> list[RerankedResult]:
-        """
-        Rerank search results.
-        
-        Args:
-            query: Original search query
-            results: List of search results (HybridSearchResult or similar)
-            top_k: Number of results to return after reranking
-            
-        Returns:
-            List of RerankedResult objects
-        """
+        """Rerank search results using Cohere API."""
         if not results:
             return []
 
@@ -126,7 +105,6 @@ class Reranker:
             
         except Exception as e:
             logger.error(f"Reranking failed: {e}")
-            # Fallback: return original results
             return [
                 RerankedResult(
                     id=r.id,
@@ -151,7 +129,7 @@ class MockReranker:
         results: list,
         top_k: int = 3,
     ) -> list[RerankedResult]:
-        """Mock rerank - returns top results unchanged."""
+        """Mock rerank returning top results unchanged."""
         return [
             RerankedResult(
                 id=r.id,
@@ -167,15 +145,11 @@ class MockReranker:
         ]
 
 
-# =============================================================================
-# Global Instance
-# =============================================================================
-
 _reranker = None
 
 
 def get_reranker(use_mock: bool = False, **kwargs):
-    """Get or create the global reranker instance."""
+    """Get or create global reranker instance."""
     global _reranker
     
     if use_mock:

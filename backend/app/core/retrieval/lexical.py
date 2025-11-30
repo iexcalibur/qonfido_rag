@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Lexical Search
-=============================
-BM25-based lexical/keyword search implementation.
-"""
+"""BM25-based lexical/keyword search implementation."""
 
 import logging
 import re
@@ -16,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class LexicalSearchResult:
-    """Represents a lexical search result."""
+    """BM25 lexical search result."""
     
     id: str
     text: str
@@ -26,14 +22,7 @@ class LexicalSearchResult:
 
 
 class LexicalSearcher:
-    """
-    BM25-based lexical search engine.
-    
-    BM25 is great for:
-    - Exact keyword matching
-    - Specific fund names
-    - Technical terms
-    """
+    """BM25-based lexical search for exact keyword matching."""
 
     def __init__(self):
         self._index: BM25Okapi | None = None
@@ -41,19 +30,14 @@ class LexicalSearcher:
         self._tokenized_docs: list[list[str]] = []
 
     def _tokenize(self, text: str) -> list[str]:
-        """Tokenize text for BM25."""
+        """Tokenize text for BM25 indexing."""
         text = text.lower()
         text = re.sub(r"[^a-z0-9\s]", " ", text)
         tokens = [t.strip() for t in text.split() if t.strip()]
         return tokens
 
     def index_documents(self, documents: list[dict]) -> None:
-        """
-        Index documents for search.
-        
-        Args:
-            documents: List of dicts with 'id', 'text', 'metadata', 'source' keys
-        """
+        """Index documents for BM25 search."""
         if not documents:
             logger.warning("No documents to index")
             return
@@ -75,17 +59,7 @@ class LexicalSearcher:
         top_k: int = 5,
         source_filter: str | None = None,
     ) -> list[LexicalSearchResult]:
-        """
-        Search for documents matching the query.
-        
-        Args:
-            query: Search query
-            top_k: Number of results to return
-            source_filter: Filter by source ('faq' or 'fund')
-            
-        Returns:
-            List of LexicalSearchResult objects
-        """
+        """Search for documents matching the query using BM25."""
         if self._index is None:
             logger.warning("Index not built. Call index_documents first.")
             return []
@@ -126,7 +100,7 @@ class LexicalSearcher:
 
     @property
     def document_count(self) -> int:
-        """Get the number of indexed documents."""
+        """Get number of indexed documents."""
         return len(self._documents)
     
     def clear(self) -> None:
@@ -137,15 +111,11 @@ class LexicalSearcher:
         logger.info("Lexical index cleared")
 
 
-# =============================================================================
-# Global Instance
-# =============================================================================
-
 _lexical_searcher: LexicalSearcher | None = None
 
 
 def get_lexical_searcher() -> LexicalSearcher:
-    """Get or create the global lexical searcher instance."""
+    """Get or create global lexical searcher instance."""
     global _lexical_searcher
     if _lexical_searcher is None:
         _lexical_searcher = LexicalSearcher()

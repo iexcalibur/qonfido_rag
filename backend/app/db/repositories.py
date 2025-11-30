@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Database Repositories
-====================================
-Data access layer for database operations.
-"""
+"""Data access layer for database operations."""
 
 import logging
 from datetime import datetime
@@ -64,7 +60,7 @@ class FundRepository:
         return list(self.session.exec(statement).all())
 
     def get_top_by_cagr(self, years: int = 3, limit: int = 10) -> list[Fund]:
-        """Get top funds by CAGR."""
+        """Get top funds by CAGR for specified years."""
         if years == 1:
             column = Fund.cagr_1yr
         elif years == 5:
@@ -198,7 +194,6 @@ class QueryLogRepository:
                 "query_type_distribution": {},
             }
 
-        # Calculate statistics
         total = len(logs)
         response_times = [l.response_time_ms for l in logs if l.response_time_ms]
         confidences = [l.confidence for l in logs if l.confidence]

@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Query Endpoints
-==============================
-Main RAG query endpoints.
-"""
+"""RAG query endpoints for natural language fund queries."""
 
 import logging
 
@@ -19,12 +15,11 @@ from app.core.orchestration.pipeline import RAGPipeline
 router = APIRouter(tags=["Query"])
 logger = logging.getLogger(__name__)
 
-# Initialize pipeline (will be done properly with dependency injection)
 _pipeline: RAGPipeline | None = None
 
 
 def get_pipeline() -> RAGPipeline:
-    """Get or create the RAG pipeline."""
+    """Get or create the RAG pipeline instance."""
     global _pipeline
     if _pipeline is None:
         _pipeline = RAGPipeline()
@@ -40,25 +35,7 @@ def get_pipeline() -> RAGPipeline:
     },
 )
 async def query(request: QueryRequest) -> QueryResponse:
-    """
-    Process a RAG query.
-    
-    This endpoint:
-    1. Classifies the query (FAQ vs numerical vs hybrid)
-    2. Retrieves relevant documents using the specified search mode
-    3. Optionally reranks results
-    4. Generates a response using Claude
-    
-    **Search Modes:**
-    - `lexical`: BM25 keyword-based search
-    - `semantic`: Vector similarity search
-    - `hybrid`: Combined lexical + semantic with RRF fusion
-    
-    **Example Queries:**
-    - "What is an index fund?" (FAQ query)
-    - "Which funds have the best Sharpe ratio?" (Numerical query)
-    - "Explain low-risk funds with good returns" (Hybrid query)
-    """
+    """Process a RAG query with retrieval and generation."""
     try:
         logger.info(f"Processing query: {request.query[:50]}... | mode={request.search_mode}")
         
@@ -85,11 +62,7 @@ async def query(request: QueryRequest) -> QueryResponse:
 
 @router.get("/search-modes")
 async def list_search_modes() -> dict:
-    """
-    List available search modes.
-    
-    Returns information about each search mode and when to use them.
-    """
+    """List available search modes and their descriptions."""
     return {
         "modes": [
             {

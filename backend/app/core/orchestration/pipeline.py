@@ -1,15 +1,4 @@
-"""
-Qonfido RAG - Pipeline
-=======================
-Main RAG pipeline that orchestrates ingestion, retrieval, and generation.
-
-Features:
-- Query caching for repeated queries
-- Embedding caching for efficiency
-- Parallel hybrid retrieval
-- Optional reranking with Cohere
-- Smart Persistence with Hash-based change detection
-"""
+"""Main RAG pipeline orchestrating ingestion, retrieval, and generation."""
 
 import hashlib
 import json
@@ -37,15 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class RAGPipeline:
-    """
-    Main RAG pipeline orchestrating:
-    1. Data ingestion and indexing
-    2. Query embedding (with caching)
-    3. Retrieval (lexical/semantic/hybrid with parallel execution)
-    4. Reranking (optional)
-    5. Response generation
-    6. Query result caching
-    """
+    """Main RAG pipeline with caching, parallel retrieval, and hash-based persistence."""
 
     def __init__(
         self,
@@ -53,14 +34,11 @@ class RAGPipeline:
         use_reranker: bool = True,
         use_query_cache: bool = True,
     ):
-        # Use settings if not provided (settings.data_dir already includes 'raw')
         self.data_dir = data_dir or settings.data_dir
         self.use_reranker = use_reranker
         self.use_query_cache = use_query_cache
         self._initialized = False
         
-        # Components (lazy loaded) - enable caching and parallel
-        # Enable ChromaDB persistence with configured directory
         self.embedder = get_embedder(use_cache=True)
         self.lexical_searcher = get_lexical_searcher()
         self.semantic_searcher = get_semantic_searcher(
@@ -70,11 +48,8 @@ class RAGPipeline:
         self.hybrid_searcher = get_hybrid_searcher(use_parallel=True)
         self.generator = get_generator()
         
-        # State file path for hash-based change detection
-        # Store in parent directory to keep raw data directory clean
         self._state_file = Path(self.data_dir).parent / "index.state"
         
-        # Query cache
         self._query_cache = None
         if use_query_cache:
             try:
@@ -84,7 +59,6 @@ class RAGPipeline:
             except Exception as e:
                 logger.warning(f"Query cache not available: {e}")
         
-        # Try to get reranker (may fail if no API key)
         try:
             self.reranker = get_reranker() if use_reranker else None
         except Exception as e:
@@ -92,19 +66,9 @@ class RAGPipeline:
             self.reranker = None
 
     def _get_current_state_hash(self) -> str:
-        """
-        Generate a hash of current data files and configuration.
-        
-        This hash represents the "fingerprint" of the current data state.
-        If the hash changes, we know the data or config has changed and
-        we need to re-index.
-        
-        Returns:
-            Hexadecimal hash string representing current data state
-        """
+        """Generate MD5 hash of data files and config for change detection."""
         hasher = hashlib.md5()
         
-        # 1. Hash the data files
         files = [
             Path(settings.faqs_path),
             Path(settings.funds_path),
@@ -120,35 +84,20 @@ class RAGPipeline:
                     logger.warning(f"Failed to hash file {file_path}: {e}")
             else:
                 logger.warning(f"Data file not found: {file_path}")
-                # Include in hash even if missing to detect file addition/removal
                 hasher.update(str(file_path).encode())
         
-        # 2. Hash critical config (if model changes, we must re-index)
-        # Include embedding model name and dimension
         hasher.update(settings.embedding_model.encode())
         hasher.update(str(settings.embedding_dimension).encode())
         
         return hasher.hexdigest()
 
     def initialize(self, clear_existing: bool = False) -> None:
-        """
-        Initialize the pipeline by loading and indexing data.
-        
-        Uses hash-based change detection for smart persistence:
-        - Always loads documents and builds lexical index (fast, in-memory)
-        - Only checks hash for semantic indexing (slow, persistent)
-        - If data/config unchanged: Uses persistent vector store (fast startup)
-        - If data/config changed: Clears and re-indexes (ensures fresh data)
-        
-        Args:
-            clear_existing: If True, forces a rebuild of the semantic index regardless of state.
-        """
+        """Initialize pipeline with hash-based change detection for fast startup."""
         if self._initialized:
             return
             
         logger.info("Initializing RAG pipeline...")
         
-        # 1. Always Load Data (Fast) - Needed for Lexical Search (BM25) which isn't persistent
         loader = DataLoader(
             data_dir=self.data_dir,
             faqs_file=settings.faqs_file,
@@ -163,13 +112,9 @@ class RAGPipeline:
             
         logger.info(f"Loaded {len(documents)} documents from CSV files")
         
-        # 2. Always Build Lexical Index (Fast, In-Memory)
-        # BM25 doesn't persist, so we rebuild it every time (it's fast)
         self.lexical_searcher.index_documents(documents)
         logger.info("✓ Lexical search index built")
         
-        # 3. Smart Semantic Indexing (Slow, Persistent)
-        # Check if we can skip the expensive embedding/indexing step
         current_hash = self._get_current_state_hash()
         should_reindex = clear_existing
         
@@ -179,17 +124,15 @@ class RAGPipeline:
                 saved_hash = saved_state.get("hash")
                 
                 if saved_hash == current_hash:
-                    # Hash matches - check if the collection actually has data
                     try:
                         self.semantic_searcher._initialize()
                         doc_count = self.semantic_searcher.document_count
                         
                         if doc_count > 0:
-                            logger.info("✅ Data/Config unchanged. Using persistent vector store.")
+                            logger.info("Data/Config unchanged. Using persistent vector store.")
                             logger.info(f"✓ Loaded {doc_count} documents from persistent store (instant startup!)")
                             self._initialized = True
                             
-                            # Log cache stats
                             if hasattr(self.embedder, 'cache_stats'):
                                 stats = self.embedder.cache_stats
                                 logger.info(f"Embedding cache: {stats.get('size', 0)} entries")
@@ -215,26 +158,21 @@ class RAGPipeline:
                 logger.info("🔄 No state file found. Starting full semantic ingestion...")
             should_reindex = True
         
-        # --- Re-index Semantic Search (Data Changed or Force Refresh) ---
         if should_reindex:
             logger.info("🔄 Change detected or index missing. Starting full semantic ingestion...")
             
-            # Clear existing semantic index to ensure clean state
             try:
                 self.semantic_searcher.clear()
                 logger.info("✓ Cleared existing semantic index")
             except Exception as e:
                 logger.warning(f"⚠ Failed to clear existing semantic index (may not exist): {e}")
             
-            # Generate embeddings (this is the slow part, but caching helps)
             texts = [doc["text"] for doc in documents]
             embeddings = self.embedder.embed_texts(texts)
             
-            # Index into Vector Store (persistent)
             self.semantic_searcher.index_documents(documents, embeddings)
             logger.info("✓ Semantic search index built and persisted")
             
-            # Save new state
             try:
                 state_data = {
                     "hash": current_hash,
@@ -248,7 +186,7 @@ class RAGPipeline:
                 logger.warning(f"⚠ Failed to save index state: {e}")
         
         self._initialized = True
-        logger.info(f"✅ Pipeline initialized with {len(documents)} documents")
+        logger.info(f"Pipeline initialized with {len(documents)} documents")
         
         # Log cache stats
         if hasattr(self.embedder, 'cache_stats'):
@@ -263,20 +201,7 @@ class RAGPipeline:
         rerank: bool = True,
         source_filter: str | None = None,
     ) -> QueryResponse:
-        """
-        Process a query through the RAG pipeline.
-        
-        Args:
-            query: User's question
-            search_mode: Search mode (lexical/semantic/hybrid)
-            top_k: Number of results to retrieve
-            rerank: Whether to apply reranking
-            source_filter: Filter by source type
-            
-        Returns:
-            QueryResponse with answer and sources
-        """
-        # Check query cache first
+        """Process query through RAG pipeline: retrieve, rerank, generate."""
         if self._query_cache and self.use_query_cache:
             cached = self._query_cache.get(
                 query=query,
@@ -288,14 +213,11 @@ class RAGPipeline:
                 logger.info("Query cache hit!")
                 return QueryResponse(**cached)
         
-        # Ensure initialized
         if not self._initialized:
             self.initialize()
 
-        # Embed query (with caching)
         query_embedding = self.embedder.embed_query(query)
         
-        # Retrieve documents based on mode
         if search_mode == SearchMode.LEXICAL:
             results = self.lexical_searcher.search(
                 query=query,
@@ -308,7 +230,7 @@ class RAGPipeline:
                 top_k=top_k,
                 source_filter=source_filter,
             )
-        else:  # HYBRID (with parallel retrieval)
+        else:
             results = self.hybrid_searcher.search(
                 query=query,
                 query_embedding=query_embedding,
@@ -316,7 +238,6 @@ class RAGPipeline:
                 source_filter=source_filter,
             )
 
-        # Optionally rerank
         if rerank and self.reranker and results:
             try:
                 results = self.reranker.rerank(
@@ -327,7 +248,6 @@ class RAGPipeline:
             except Exception as e:
                 logger.warning(f"Reranking failed: {e}")
 
-        # Prepare context for generation
         context = [
             {
                 "text": r.text,
@@ -337,23 +257,18 @@ class RAGPipeline:
             for r in results
         ]
 
-        # Generate response
         answer = self.generator.generate(
             query=query,
             context=context,
         )
 
-        # Classify query type
         query_type = self._classify_query(query, results)
-
-        # Extract fund info
         funds = self._extract_fund_info(results)
 
-        # Build source documents
         sources = [
             SourceDocument(
                 id=r.id,
-                text=r.text[:500],  # Truncate for response
+                text=r.text[:500],
                 source=r.source,
                 score=r.score if hasattr(r, 'score') else (r.rerank_score if hasattr(r, 'rerank_score') else 0.0),
                 metadata=r.metadata,
@@ -361,7 +276,6 @@ class RAGPipeline:
             for r in results
         ]
 
-        # Calculate confidence
         confidence = self._calculate_confidence(results)
 
         response = QueryResponse(
@@ -373,7 +287,6 @@ class RAGPipeline:
             search_mode=search_mode,
         )
         
-        # Cache the response
         if self._query_cache and self.use_query_cache:
             self._query_cache.set(
                 query=query,
@@ -386,16 +299,14 @@ class RAGPipeline:
         return response
 
     def _classify_query(self, query: str, results: list) -> str:
-        """Classify the query type based on content and results."""
+        """Classify query type (faq/numerical/hybrid) based on content and results."""
         query_lower = query.lower()
         
-        # Check for numerical indicators
         numerical_keywords = [
             "best", "top", "highest", "lowest", "sharpe", "cagr",
             "return", "performance", "risk", "volatility", "compare"
         ]
         
-        # Check for FAQ indicators
         faq_keywords = [
             "what is", "what are", "how does", "explain", "define",
             "meaning", "difference between"
@@ -404,7 +315,6 @@ class RAGPipeline:
         is_numerical = any(kw in query_lower for kw in numerical_keywords)
         is_faq = any(kw in query_lower for kw in faq_keywords)
         
-        # Check result sources
         if results:
             sources = [r.source for r in results[:3]]
             fund_count = sources.count("fund")
@@ -418,11 +328,11 @@ class RAGPipeline:
         return "hybrid"
 
     def _extract_fund_info(self, results: list) -> list[FundInfo]:
-        """Extract fund information from results, with fallback to funds cache."""
+        """Extract fund information from results with fallback to funds cache."""
         from app.api.v1.funds import get_funds
         
         def _to_float(value) -> float | None:
-            """Convert value to float, handling None and string cases."""
+            """Convert value to float handling None and string cases."""
             if value is None:
                 return None
             if isinstance(value, (int, float)):
@@ -437,7 +347,6 @@ class RAGPipeline:
         funds = []
         seen_names = set()
         
-        # Get full fund data from cache for fallback (by name and ID)
         try:
             all_funds = get_funds()
             funds_by_name = {f.fund_name: f for f in all_funds}
@@ -460,21 +369,18 @@ class RAGPipeline:
             
             seen_names.add(fund_name)
             
-            # Try to get full fund data from cache (prefer by ID, fallback to name)
             cached_fund = None
             if fund_id and fund_id in funds_by_id:
                 cached_fund = funds_by_id[fund_id]
             elif fund_name in funds_by_name:
                 cached_fund = funds_by_name[fund_name]
             
-            # Extract and convert numeric values from metadata
             cagr_1yr = _to_float(metadata.get("cagr_1yr"))
             cagr_3yr = _to_float(metadata.get("cagr_3yr"))
             cagr_5yr = _to_float(metadata.get("cagr_5yr"))
             sharpe_ratio = _to_float(metadata.get("sharpe_ratio"))
             volatility = _to_float(metadata.get("volatility"))
             
-            # Use metadata first, but fallback to cached fund data if metadata values are missing
             fund_info = FundInfo(
                 fund_name=fund_name,
                 fund_house=metadata.get("fund_house") or (cached_fund.fund_house if cached_fund else None),
@@ -489,14 +395,13 @@ class RAGPipeline:
             
             funds.append(fund_info)
         
-        return funds[:5]  # Limit to top 5 funds
+        return funds[:5]
 
     def _calculate_confidence(self, results: list) -> float:
-        """Calculate confidence score based on retrieval results."""
+        """Calculate confidence score from top retrieval result scores."""
         if not results:
             return 0.0
         
-        # Use average of top scores
         scores = []
         for r in results[:3]:
             if hasattr(r, 'rerank_score'):
@@ -507,7 +412,6 @@ class RAGPipeline:
         if not scores:
             return 0.5
         
-        # Normalize to 0-1 range
         avg_score = sum(scores) / len(scores)
         return min(max(avg_score, 0.0), 1.0)
     
@@ -523,15 +427,11 @@ class RAGPipeline:
         return stats
 
 
-# =============================================================================
-# Global Instance
-# =============================================================================
-
 _pipeline: RAGPipeline | None = None
 
 
 def get_pipeline(**kwargs) -> RAGPipeline:
-    """Get or create the global pipeline instance."""
+    """Get or create global pipeline instance."""
     global _pipeline
     if _pipeline is None:
         _pipeline = RAGPipeline(**kwargs)

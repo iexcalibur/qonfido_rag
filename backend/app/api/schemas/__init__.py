@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - API Schemas
-==========================
-Pydantic models for API requests and responses.
-"""
+"""Pydantic models for API request validation and response serialization."""
 
 from app.api.schemas.common import (
     HealthResponse,
@@ -27,19 +23,16 @@ from app.api.schemas.query import (
 )
 
 __all__ = [
-    # Common
     "HealthResponse",
     "MessageResponse",
     "PaginationParams",
     "PaginatedResponse",
-    # Query
     "SearchMode",
     "QueryRequest",
     "QueryResponse",
     "SourceDocument",
     "FundInfo",
     "ErrorResponse",
-    # Fund
     "FundSummary",
     "FundDetail",
     "FundListResponse",

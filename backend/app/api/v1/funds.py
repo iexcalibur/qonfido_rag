@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Fund Endpoints
-=============================
-Endpoints for fund data and comparison.
-"""
+"""Endpoints for fund data retrieval and comparison."""
 
 import logging
 
@@ -21,13 +17,12 @@ from app.core.ingestion.loader import DataLoader
 router = APIRouter(tags=["Funds"])
 logger = logging.getLogger(__name__)
 
-# Data loader instance
 _loader: DataLoader | None = None
 _funds_cache: list | None = None
 
 
 def get_funds():
-    """Get cached funds data."""
+    """Get cached funds data, loading from CSV if not cached."""
     global _loader, _funds_cache
     if _funds_cache is None:
         _loader = DataLoader(
@@ -41,7 +36,7 @@ def get_funds():
 
 
 def clear_funds_cache():
-    """Clear the funds cache (useful for reloading data)."""
+    """Clear the funds cache to force reload on next request."""
     global _funds_cache
     _funds_cache = None
     logger.info("Funds cache cleared")
@@ -53,11 +48,7 @@ async def list_funds(
     risk_level: str | None = Query(None, description="Filter by risk level"),
     limit: int = Query(50, ge=1, le=100, description="Maximum results"),
 ) -> FundListResponse:
-    """
-    List all available funds.
-    
-    Optionally filter by category or risk level.
-    """
+    """List funds with optional filtering by category or risk level."""
     try:
         funds = get_funds()
         
@@ -97,9 +88,7 @@ async def list_funds(
 
 @router.get("/funds/{fund_id}", response_model=FundDetail)
 async def get_fund(fund_id: str) -> FundDetail:
-    """
-    Get detailed information about a specific fund.
-    """
+    """Get detailed information for a specific fund including all metrics."""
     try:
         funds = get_funds()
         
@@ -139,11 +128,7 @@ async def get_fund(fund_id: str) -> FundDetail:
 
 @router.post("/funds/compare", response_model=FundCompareResponse)
 async def compare_funds(request: FundCompareRequest) -> FundCompareResponse:
-    """
-    Compare multiple funds side by side.
-    
-    Provide 2-5 fund IDs to compare their metrics.
-    """
+    """Compare 2-5 funds side by side with detailed metrics."""
     try:
         funds = get_funds()
         
@@ -195,11 +180,7 @@ async def compare_funds(request: FundCompareRequest) -> FundCompareResponse:
 
 @router.get("/funds/summary/metrics")
 async def get_fund_metrics_summary() -> dict:
-    """
-    Get summary statistics of all fund metrics.
-    
-    Useful for understanding the range of values in the dataset.
-    """
+    """Get summary statistics (min/max/avg) for all fund metrics."""
     try:
         funds = get_funds()
         

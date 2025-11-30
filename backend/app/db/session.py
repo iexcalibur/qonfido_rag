@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Database Session
-===============================
-Database connection and session management.
-"""
+"""Database connection and session management."""
 
 import logging
 from contextlib import contextmanager
@@ -12,28 +8,13 @@ from sqlmodel import Session, SQLModel, create_engine
 
 logger = logging.getLogger(__name__)
 
-# Default to SQLite for simplicity (no server needed)
 DEFAULT_DATABASE_URL = "sqlite:///./qonfido_rag.db"
 
 
 class DatabaseManager:
-    """
-    Database connection manager.
-    
-    Supports:
-    - SQLite (default, no setup needed)
-    - PostgreSQL (for production)
-    """
+    """Database connection manager supporting SQLite and PostgreSQL."""
 
     def __init__(self, database_url: str | None = None):
-        """
-        Initialize database manager.
-        
-        Args:
-            database_url: Database connection string.
-                         SQLite: sqlite:///./database.db
-                         PostgreSQL: postgresql://user:pass@host:port/db
-        """
         self.database_url = database_url or DEFAULT_DATABASE_URL
         self._engine = None
 
@@ -41,14 +22,13 @@ class DatabaseManager:
     def engine(self):
         """Lazy load database engine."""
         if self._engine is None:
-            # SQLite specific settings
             connect_args = {}
             if self.database_url.startswith("sqlite"):
                 connect_args["check_same_thread"] = False
 
             self._engine = create_engine(
                 self.database_url,
-                echo=False,  # Set True for SQL debugging
+                echo=False,
                 connect_args=connect_args,
             )
             logger.info(f"Database engine created: {self.database_url.split('@')[-1]}")
@@ -61,7 +41,7 @@ class DatabaseManager:
         logger.info("Database tables created")
 
     def drop_tables(self) -> None:
-        """Drop all database tables (use with caution!)."""
+        """Drop all database tables."""
         SQLModel.metadata.drop_all(self.engine)
         logger.warning("Database tables dropped")
 
@@ -71,14 +51,7 @@ class DatabaseManager:
 
     @contextmanager
     def session_scope(self) -> Generator[Session, None, None]:
-        """
-        Context manager for database sessions.
-        
-        Usage:
-            with db.session_scope() as session:
-                session.add(obj)
-                session.commit()
-        """
+        """Context manager for database sessions with automatic commit/rollback."""
         session = self.get_session()
         try:
             yield session
@@ -90,15 +63,11 @@ class DatabaseManager:
             session.close()
 
 
-# =============================================================================
-# Global Instance
-# =============================================================================
-
 _db_manager: DatabaseManager | None = None
 
 
 def get_db_manager(database_url: str | None = None) -> DatabaseManager:
-    """Get or create the global database manager instance."""
+    """Get or create global database manager instance."""
     global _db_manager
     if _db_manager is None:
         _db_manager = DatabaseManager(database_url)
@@ -106,14 +75,7 @@ def get_db_manager(database_url: str | None = None) -> DatabaseManager:
 
 
 def get_session() -> Generator[Session, None, None]:
-    """
-    Dependency for FastAPI to get database sessions.
-    
-    Usage in endpoints:
-        @router.get("/items")
-        def get_items(session: Session = Depends(get_session)):
-            ...
-    """
+    """FastAPI dependency to get database sessions."""
     db = get_db_manager()
     with db.session_scope() as session:
         yield session

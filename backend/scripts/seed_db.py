@@ -1,20 +1,11 @@
 #!/usr/bin/env python3
-"""
-Qonfido RAG - Database Seeding Script
-======================================
-Seed the database with fund and FAQ data from CSV files.
-
-Usage:
-    python -m scripts.seed_db
-    python -m scripts.seed_db --clear  # Clear existing data first
-"""
+"""Seed the database with fund and FAQ data from CSV files."""
 
 import argparse
 import logging
 import sys
 from pathlib import Path
 
-# Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.ingestion import DataLoader
@@ -35,16 +26,7 @@ def seed_database(
     data_dir: str = "data/raw",
     clear_existing: bool = False,
 ) -> dict:
-    """
-    Seed the database with data from CSV files.
-    
-    Args:
-        data_dir: Directory containing CSV files
-        clear_existing: Whether to clear existing data first
-        
-    Returns:
-        Dictionary with seeding statistics
-    """
+    """Seed the database with data from CSV files."""
     stats = {"faqs_seeded": 0, "funds_seeded": 0}
 
     logger.info("Initializing database...")
@@ -55,9 +37,8 @@ def seed_database(
         db.drop_tables()
     
     db.create_tables()
-    logger.info("✓ Database tables ready")
+    logger.info("Database tables ready")
 
-    # Load data from CSV
     logger.info(f"Loading data from {data_dir}...")
     loader = DataLoader(data_dir)
     
@@ -67,7 +48,6 @@ def seed_database(
         logger.error(f"Failed to load data: {e}")
         return stats
 
-    # Seed FAQs
     if faqs:
         logger.info(f"Seeding {len(faqs)} FAQs...")
         with db.session_scope() as session:
@@ -85,9 +65,8 @@ def seed_database(
                 except Exception as e:
                     logger.warning(f"Failed to seed FAQ {faq.id}: {e}")
         
-        logger.info(f"✓ Seeded {stats['faqs_seeded']} FAQs")
+        logger.info(f"Seeded {stats['faqs_seeded']} FAQs")
 
-    # Seed Funds
     if funds:
         logger.info(f"Seeding {len(funds)} funds...")
         with db.session_scope() as session:
@@ -119,7 +98,7 @@ def seed_database(
                 except Exception as e:
                     logger.warning(f"Failed to seed fund {fund.id}: {e}")
         
-        logger.info(f"✓ Seeded {stats['funds_seeded']} funds")
+        logger.info(f"Seeded {stats['funds_seeded']} funds")
 
     logger.info("=" * 40)
     logger.info("DATABASE SEEDING COMPLETE")

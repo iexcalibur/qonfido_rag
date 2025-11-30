@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Vector Store Service
-===================================
-Service wrapper for vector store operations.
-"""
+"""Service wrapper for vector store operations."""
 
 import logging
 from typing import Any
@@ -15,14 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class VectorStoreService:
-    """
-    Service for vector store operations.
-    
-    Wraps the semantic searcher with additional functionality:
-    - Connection management
-    - Health checks
-    - Batch operations
-    """
+    """Service wrapper for vector store operations with health checks."""
 
     def __init__(
         self,
@@ -41,12 +30,7 @@ class VectorStoreService:
         documents: list[dict[str, Any]],
         embeddings: np.ndarray,
     ) -> int:
-        """
-        Index documents with embeddings.
-        
-        Returns:
-            Number of documents indexed
-        """
+        """Index documents with embeddings, returns number indexed."""
         self._searcher.index_documents(documents, embeddings)
         return len(documents)
 
@@ -72,7 +56,7 @@ class VectorStoreService:
         self._searcher.clear()
 
     def health_check(self) -> dict[str, Any]:
-        """Check vector store health."""
+        """Check vector store health and return status."""
         try:
             count = self.get_document_count()
             return {
@@ -87,15 +71,11 @@ class VectorStoreService:
             }
 
 
-# =============================================================================
-# Global Instance
-# =============================================================================
-
 _vector_store_service: VectorStoreService | None = None
 
 
 def get_vector_store_service(**kwargs) -> VectorStoreService:
-    """Get or create the global vector store service instance."""
+    """Get or create global vector store service instance."""
     global _vector_store_service
     if _vector_store_service is None:
         _vector_store_service = VectorStoreService(**kwargs)

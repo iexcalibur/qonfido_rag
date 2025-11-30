@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Health Check Endpoints
-=====================================
-Health and status check endpoints.
-"""
+"""Health and readiness check endpoints."""
 
 from fastapi import APIRouter
 
@@ -14,15 +10,10 @@ router = APIRouter(tags=["Health"])
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
-    """
-    Health check endpoint.
-    
-    Returns the health status of the API and its dependencies.
-    """
-    # Check services (can be expanded to actually check connections)
+    """Health check endpoint returning API and service status."""
     services = {
         "api": True,
-        "embeddings": True,  # Will be updated when service is initialized
+        "embeddings": True,
         "vector_store": True,
     }
     
@@ -36,9 +27,5 @@ async def health_check() -> HealthResponse:
 
 @router.get("/ready")
 async def readiness_check() -> dict:
-    """
-    Readiness check endpoint.
-    
-    Returns whether the service is ready to accept traffic.
-    """
+    """Readiness check endpoint for Kubernetes/Docker health probes."""
     return {"ready": True}

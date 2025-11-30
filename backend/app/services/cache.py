@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Cache Service
-============================
-Caching service for embeddings and query results.
-"""
+"""Caching service for embeddings and query results."""
 
 import hashlib
 import logging
@@ -17,26 +13,16 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CacheEntry:
-    """Cache entry with value and metadata."""
+    """Cache entry with value and TTL metadata."""
     value: Any
     created_at: float
-    ttl: float  # Time to live in seconds
+    ttl: float
 
 
 class InMemoryCache:
-    """
-    Simple in-memory cache.
-    
-    For production, replace with Redis.
-    """
+    """Simple in-memory cache with TTL support."""
 
     def __init__(self, default_ttl: float = 3600):
-        """
-        Initialize cache.
-        
-        Args:
-            default_ttl: Default time-to-live in seconds (1 hour)
-        """
         self._cache: dict[str, CacheEntry] = {}
         self.default_ttl = default_ttl
 
@@ -45,11 +31,7 @@ class InMemoryCache:
         return time.time() > entry.created_at + entry.ttl
 
     def get(self, key: str) -> Any | None:
-        """
-        Get value from cache.
-        
-        Returns None if not found or expired.
-        """
+        """Get value from cache, returns None if not found or expired."""
         entry = self._cache.get(key)
         if entry is None:
             return None
@@ -61,7 +43,7 @@ class InMemoryCache:
         return entry.value
 
     def set(self, key: str, value: Any, ttl: float | None = None) -> None:
-        """Set value in cache."""
+        """Set value in cache with optional TTL."""
         self._cache[key] = CacheEntry(
             value=value,
             created_at=time.time(),
@@ -69,7 +51,7 @@ class InMemoryCache:
         )
 
     def delete(self, key: str) -> bool:
-        """Delete key from cache. Returns True if key existed."""
+        """Delete key from cache, returns True if key existed."""
         if key in self._cache:
             del self._cache[key]
             return True
@@ -80,7 +62,7 @@ class InMemoryCache:
         self._cache.clear()
 
     def cleanup_expired(self) -> int:
-        """Remove expired entries. Returns count of removed entries."""
+        """Remove expired entries, returns count of removed entries."""
         expired_keys = [
             key for key, entry in self._cache.items()
             if self._is_expired(entry)
@@ -96,17 +78,13 @@ class InMemoryCache:
 
 
 class EmbeddingCache:
-    """
-    Specialized cache for embeddings.
-    
-    Uses text hash as key to avoid recomputing embeddings.
-    """
+    """Specialized cache for embeddings using text hash as key."""
 
     def __init__(self, cache: InMemoryCache | None = None):
-        self._cache = cache or InMemoryCache(default_ttl=86400)  # 24 hours
+        self._cache = cache or InMemoryCache(default_ttl=86400)
 
     def _hash_text(self, text: str) -> str:
-        """Generate hash for text."""
+        """Generate SHA256 hash for text."""
         return hashlib.sha256(text.encode()).hexdigest()
 
     def get_embedding(self, text: str) -> np.ndarray | None:
@@ -120,12 +98,7 @@ class EmbeddingCache:
         self._cache.set(key, embedding)
 
     def get_batch(self, texts: list[str]) -> tuple[list[np.ndarray | None], list[int]]:
-        """
-        Get cached embeddings for batch of texts.
-        
-        Returns:
-            Tuple of (embeddings_or_none, indices_of_uncached)
-        """
+        """Get cached embeddings for batch, returns embeddings and uncached indices."""
         results = []
         uncached_indices = []
         
@@ -137,16 +110,17 @@ class EmbeddingCache:
         
         return results, uncached_indices
 
+    @property
+    def cache_stats(self) -> dict:
+        """Get cache statistics."""
+        return {"size": self._cache.size}
+
 
 class QueryCache:
-    """
-    Cache for query results.
-    
-    Caches full query responses to avoid repeated processing.
-    """
+    """Cache for query results to avoid repeated processing."""
 
     def __init__(self, cache: InMemoryCache | None = None):
-        self._cache = cache or InMemoryCache(default_ttl=300)  # 5 minutes
+        self._cache = cache or InMemoryCache(default_ttl=300)
 
     def _make_key(
         self,
@@ -155,7 +129,7 @@ class QueryCache:
         top_k: int,
         source_filter: str | None,
     ) -> str:
-        """Generate cache key from query parameters."""
+        """Generate MD5 cache key from query parameters."""
         key_parts = [query, search_mode, str(top_k), source_filter or ""]
         key_str = "|".join(key_parts)
         return f"query:{hashlib.md5(key_str.encode()).hexdigest()}"
@@ -184,17 +158,13 @@ class QueryCache:
         self._cache.set(key, result)
 
 
-# =============================================================================
-# Global Instances
-# =============================================================================
-
 _cache: InMemoryCache | None = None
 _embedding_cache: EmbeddingCache | None = None
 _query_cache: QueryCache | None = None
 
 
 def get_cache() -> InMemoryCache:
-    """Get or create the global cache instance."""
+    """Get or create global cache instance."""
     global _cache
     if _cache is None:
         _cache = InMemoryCache()
@@ -202,7 +172,7 @@ def get_cache() -> InMemoryCache:
 
 
 def get_embedding_cache() -> EmbeddingCache:
-    """Get or create the global embedding cache instance."""
+    """Get or create global embedding cache instance."""
     global _embedding_cache
     if _embedding_cache is None:
         _embedding_cache = EmbeddingCache(get_cache())
@@ -210,7 +180,7 @@ def get_embedding_cache() -> EmbeddingCache:
 
 
 def get_query_cache() -> QueryCache:
-    """Get or create the global query cache instance."""
+    """Get or create global query cache instance."""
     global _query_cache
     if _query_cache is None:
         _query_cache = QueryCache(get_cache())

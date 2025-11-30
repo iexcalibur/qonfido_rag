@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - API v1
-=====================
-Version 1 of the API endpoints.
-"""
+"""API v1 endpoints router."""
 
 from app.api.v1.router import api_router
 

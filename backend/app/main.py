@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - FastAPI Application
-==================================
-Main entry point for the FastAPI application.
-"""
+"""Main entry point for the FastAPI application."""
 
 import logging
 from contextlib import asynccontextmanager
@@ -20,17 +16,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Application lifespan manager.
-    
-    Handles startup and shutdown events.
-    Pre-initializes the RAG pipeline (model loading, embeddings, indexing)
-    and loads fund data cache.
-    """
-    # Startup
+    """Application lifespan manager for startup and shutdown events."""
     setup_logging(settings.log_level)
     
-    # Fix tokenizers parallelism warning
     import os
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     
@@ -38,20 +26,16 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Qonfido RAG Backend...")
     logger.info("=" * 80)
     
-    # Pre-load funds cache (fast, doesn't need models)
-    # Clear any existing cache to ensure fresh data from CSV
     logger.info("\n[1/2] Loading funds data cache...")
     try:
         from app.api.v1.funds import clear_funds_cache, get_funds
-        clear_funds_cache()  # Clear old cache to load fresh from CSV
-        funds = get_funds()  # Load fresh data from CSV files
+        clear_funds_cache()
+        funds = get_funds()
         logger.info(f"✓ Loaded {len(funds)} funds from CSV into cache")
     except Exception as e:
         logger.warning(f"⚠ Failed to pre-load funds cache: {e}")
         logger.info("  Funds will be loaded on first request")
     
-    # Pre-initialize RAG pipeline
-    # This loads the embedding model, generates embeddings, and indexes documents
     logger.info("\n[2/2] Pre-initializing RAG pipeline...")
     logger.info("  This includes:")
     logger.info("    - Downloading embedding model (first time only, ~2.3GB)")
@@ -61,7 +45,7 @@ async def lifespan(app: FastAPI):
     
     try:
         pipeline = get_pipeline()
-        pipeline.initialize()  # Synchronous initialization
+        pipeline.initialize()
         logger.info("\n" + "=" * 80)
         logger.info("✓ RAG pipeline initialized successfully!")
         logger.info("✓ Backend is ready to serve requests")
@@ -73,13 +57,11 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown
     logger.info("\nShutting down backend...")
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
-    
     app = FastAPI(
         title=settings.app_name,
         description="Financial Intelligence RAG System - AI Co-Pilot for Money",
@@ -90,29 +72,25 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS Middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Configure appropriately for production
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    # Include API routes
     app.include_router(api_router, prefix="/api/v1")
 
     return app
 
 
-# Create app instance
 app = create_app()
 
 
-# Root endpoint
 @app.get("/", tags=["Root"])
 async def root():
-    """Root endpoint - API information."""
+    """Root endpoint returning API information."""
     return {
         "name": settings.app_name,
         "version": settings.app_version,

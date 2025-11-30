@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Query Schemas
-============================
-Pydantic models for query requests and responses.
-"""
+"""Pydantic models for RAG query requests and responses."""
 
 from enum import Enum
 from typing import Any
@@ -11,16 +7,16 @@ from pydantic import BaseModel, Field
 
 
 class SearchMode(str, Enum):
-    """Search mode options."""
-    
+    """Search mode enumeration."""
+
     LEXICAL = "lexical"
     SEMANTIC = "semantic"
     HYBRID = "hybrid"
 
 
 class QueryRequest(BaseModel):
-    """Request model for RAG queries."""
-    
+    """RAG query request model."""
+
     query: str = Field(
         ...,
         description="User's question or query",
@@ -49,8 +45,8 @@ class QueryRequest(BaseModel):
 
 
 class SourceDocument(BaseModel):
-    """A source document used in the response."""
-    
+    """Source document citation from retrieval."""
+
     id: str = Field(..., description="Document ID")
     text: str = Field(..., description="Document text content")
     source: str = Field(..., description="Source type: 'faq' or 'fund'")
@@ -59,8 +55,8 @@ class SourceDocument(BaseModel):
 
 
 class FundInfo(BaseModel):
-    """Fund information in response."""
-    
+    """Fund information extracted from query results."""
+
     fund_name: str = Field(..., description="Name of the fund")
     fund_house: str | None = Field(None, description="Fund house/AMC")
     category: str | None = Field(None, description="Fund category")
@@ -73,8 +69,8 @@ class FundInfo(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """Response model for RAG queries."""
-    
+    """RAG query response with answer, sources, and metadata."""
+
     answer: str = Field(..., description="Generated answer to the query")
     query_type: str = Field(
         default="hybrid",
@@ -101,7 +97,7 @@ class QueryResponse(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    """Error response model."""
-    
+    """Standard error response format."""
+
     error: str = Field(..., description="Error message")
     detail: str | None = Field(None, description="Detailed error information")

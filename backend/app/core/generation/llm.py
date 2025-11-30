@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - LLM Generation
-=============================
-Generate responses using Claude API.
-"""
+"""Generate responses using Claude API."""
 
 import logging
 import os
@@ -16,9 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class LLMGenerator:
-    """
-    Generate responses using Claude API.
-    """
+    """Generate responses using Claude API."""
 
     def __init__(
         self,
@@ -30,7 +24,7 @@ class LLMGenerator:
         self.model = model
         self.max_tokens = max_tokens
         self.temperature = temperature
-        # Try: provided key -> settings config -> env var
+        
         try:
             settings_key = settings.anthropic_api_key.get_secret_value()
         except Exception:
@@ -59,24 +53,12 @@ class LLMGenerator:
         context: list[dict[str, Any]],
         system_prompt: str | None = None,
     ) -> str:
-        """
-        Generate a response for the query using retrieved context.
-        
-        Args:
-            query: User's question
-            context: List of retrieved documents with 'text', 'source', 'metadata'
-            system_prompt: Optional custom system prompt
-            
-        Returns:
-            Generated response string
-        """
+        """Generate response for query using retrieved context."""
         if system_prompt is None:
             system_prompt = self._get_default_system_prompt()
 
-        # Format context
         context_text = self._format_context(context)
         
-        # Build user message
         user_message = f"""Based on the following context, answer the user's question.
 
 ## Context:
@@ -111,7 +93,7 @@ class LLMGenerator:
             raise
 
     def _get_default_system_prompt(self) -> str:
-        """Get the default system prompt."""
+        """Return default system prompt for financial assistant."""
         return """You are a helpful financial assistant for Qonfido, an AI Co-Pilot for Money.
 
 Your role is to:
@@ -123,7 +105,7 @@ Your role is to:
 Always cite the source of your information (FAQ or specific fund data)."""
 
     def _format_context(self, context: list[dict[str, Any]]) -> str:
-        """Format retrieved documents as context string."""
+        """Format retrieved documents as context string with metadata."""
         if not context:
             return "No relevant context found."
         
@@ -132,7 +114,6 @@ Always cite the source of your information (FAQ or specific fund data)."""
             source = doc.get("source", "unknown")
             text = doc.get("text", "")
             
-            # Add fund-specific metadata if available
             metadata = doc.get("metadata", {})
             extra_info = ""
             if source == "fund" and metadata:
@@ -151,18 +132,13 @@ Always cite the source of your information (FAQ or specific fund data)."""
         return "\n\n".join(formatted)
 
 
-# =============================================================================
-# Global Instance
-# =============================================================================
-
 _generator: LLMGenerator | None = None
 
 
 def get_generator(**kwargs) -> LLMGenerator:
-    """Get or create the global generator instance."""
+    """Get or create global generator instance."""
     global _generator
     if _generator is None:
-        # Use settings if not provided in kwargs
         kwargs.setdefault("model", settings.claude_model)
         kwargs.setdefault("max_tokens", settings.claude_max_tokens)
         kwargs.setdefault("temperature", settings.claude_temperature)

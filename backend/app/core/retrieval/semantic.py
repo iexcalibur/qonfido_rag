@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Semantic Search
-==============================
-Vector-based semantic search using ChromaDB.
-"""
+"""Vector-based semantic search using ChromaDB."""
 
 import logging
 from dataclasses import dataclass
@@ -15,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class SemanticSearchResult:
-    """Represents a semantic search result."""
+    """Semantic search result with similarity score."""
     
     id: str
     text: str
@@ -25,27 +21,13 @@ class SemanticSearchResult:
 
 
 class SemanticSearcher:
-    """
-    Semantic search using ChromaDB.
-    
-    ChromaDB is great for:
-    - No server needed (runs in-process)
-    - Simple setup
-    - Good for development and small-medium datasets
-    """
+    """Semantic search using ChromaDB for in-process vector storage."""
 
     def __init__(
         self,
         collection_name: str = "qonfido_funds",
         persist_dir: str | None = None,
     ):
-        """
-        Initialize semantic searcher.
-        
-        Args:
-            collection_name: Name of the ChromaDB collection
-            persist_dir: Directory to persist data (None for in-memory)
-        """
         self.collection_name = collection_name
         self.persist_dir = persist_dir
         self._client = None
@@ -53,7 +35,7 @@ class SemanticSearcher:
         self._documents: dict[str, dict] = {}
 
     def _initialize(self):
-        """Initialize ChromaDB client and collection."""
+        """Initialize ChromaDB client and collection (lazy initialization)."""
         if self._client is not None:
             return
             
@@ -87,13 +69,7 @@ class SemanticSearcher:
         documents: list[dict],
         embeddings: np.ndarray,
     ) -> None:
-        """
-        Index documents with their embeddings.
-        
-        Args:
-            documents: List of dicts with 'id', 'text', 'metadata', 'source' keys
-            embeddings: numpy array of shape (len(documents), embedding_dim)
-        """
+        """Index documents with their embeddings in ChromaDB."""
         if len(documents) != len(embeddings):
             raise ValueError("Documents and embeddings count mismatch")
 
@@ -101,11 +77,9 @@ class SemanticSearcher:
 
         logger.info(f"Indexing {len(documents)} documents for semantic search...")
 
-        # Store documents locally
         for doc in documents:
             self._documents[doc["id"]] = doc
 
-        # Prepare for ChromaDB
         ids = [doc["id"] for doc in documents]
         texts = [doc["text"] for doc in documents]
         metadatas = []
@@ -118,7 +92,6 @@ class SemanticSearcher:
                         meta[k] = v
             metadatas.append(meta)
 
-        # Add to collection
         self._collection.add(
             ids=ids,
             embeddings=embeddings.tolist(),
@@ -134,24 +107,13 @@ class SemanticSearcher:
         top_k: int = 5,
         source_filter: str | None = None,
     ) -> list[SemanticSearchResult]:
-        """
-        Search for similar documents.
-        
-        Args:
-            query_embedding: Query vector
-            top_k: Number of results to return
-            source_filter: Filter by source ('faq' or 'fund')
-            
-        Returns:
-            List of SemanticSearchResult objects
-        """
+        """Search for similar documents using cosine similarity."""
         self._initialize()
         
         if self._collection.count() == 0:
             logger.warning("Collection is empty")
             return []
 
-        # Build filter
         where = None
         if source_filter:
             where = {"source": source_filter}
@@ -167,7 +129,6 @@ class SemanticSearcher:
         if results["ids"] and results["ids"][0]:
             for i, doc_id in enumerate(results["ids"][0]):
                 distance = results["distances"][0][i] if results["distances"] else 0
-                # Cosine distance to similarity
                 score = 1 - distance
                 
                 search_results.append(
@@ -184,7 +145,7 @@ class SemanticSearcher:
 
     @property
     def document_count(self) -> int:
-        """Get the number of indexed documents."""
+        """Get number of indexed documents."""
         self._initialize()
         return self._collection.count()
     
@@ -200,15 +161,11 @@ class SemanticSearcher:
         logger.info("Collection cleared")
 
 
-# =============================================================================
-# Global Instance
-# =============================================================================
-
 _semantic_searcher: SemanticSearcher | None = None
 
 
 def get_semantic_searcher(**kwargs) -> SemanticSearcher:
-    """Get or create the global semantic searcher instance."""
+    """Get or create global semantic searcher instance."""
     global _semantic_searcher
     if _semantic_searcher is None:
         _semantic_searcher = SemanticSearcher(**kwargs)

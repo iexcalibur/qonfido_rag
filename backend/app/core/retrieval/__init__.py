@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Retrieval Module
-===============================
-Search implementations: lexical, semantic, and hybrid.
-"""
+"""Search implementations: lexical, semantic, and hybrid."""
 
 from app.core.retrieval.hybrid import HybridSearcher, HybridSearchResult, get_hybrid_searcher
 from app.core.retrieval.lexical import LexicalSearcher, LexicalSearchResult, get_lexical_searcher

@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Orchestration Module
-===================================
-Pipeline orchestration for RAG workflow.
-"""
+"""Pipeline orchestration for RAG workflow."""
 
 from app.core.orchestration.pipeline import RAGPipeline, get_pipeline
 

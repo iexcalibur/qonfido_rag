@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Generation Module
-================================
-LLM-based response generation.
-"""
+"""LLM-based response generation using Claude API."""
 
 from app.core.generation.llm import LLMGenerator, get_generator
 from app.core.generation.prompts import (

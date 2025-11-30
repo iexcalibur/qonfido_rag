@@ -1,8 +1,4 @@
-"""
-Qonfido RAG - Database Models
-==============================
-SQLModel models for database tables.
-"""
+"""SQLModel models for database tables."""
 
 from datetime import datetime
 from typing import Any
@@ -12,18 +8,16 @@ from sqlmodel import Field, SQLModel
 
 class FundBase(SQLModel):
     """Base model for fund data."""
-    
+
     fund_name: str = Field(..., index=True)
     fund_house: str | None = Field(default=None, index=True)
     category: str | None = Field(default=None, index=True)
     sub_category: str | None = None
     
-    # Performance Metrics
     cagr_1yr: float | None = None
     cagr_3yr: float | None = None
     cagr_5yr: float | None = None
     
-    # Risk Metrics
     volatility: float | None = None
     sharpe_ratio: float | None = None
     sortino_ratio: float | None = None
@@ -31,7 +25,6 @@ class FundBase(SQLModel):
     beta: float | None = None
     alpha: float | None = None
     
-    # Fund Details
     aum: float | None = None
     expense_ratio: float | None = None
     nav: float | None = None
@@ -40,7 +33,7 @@ class FundBase(SQLModel):
 
 class Fund(FundBase, table=True):
     """Fund database table."""
-    
+
     __tablename__ = "funds"
     
     id: int | None = Field(default=None, primary_key=True)
@@ -51,7 +44,7 @@ class Fund(FundBase, table=True):
 
 class FAQBase(SQLModel):
     """Base model for FAQ data."""
-    
+
     question: str
     answer: str
     category: str | None = Field(default=None, index=True)
@@ -59,7 +52,7 @@ class FAQBase(SQLModel):
 
 class FAQ(FAQBase, table=True):
     """FAQ database table."""
-    
+
     __tablename__ = "faqs"
     
     id: int | None = Field(default=None, primary_key=True)
@@ -69,7 +62,7 @@ class FAQ(FAQBase, table=True):
 
 class QueryLogBase(SQLModel):
     """Base model for query logs."""
-    
+
     query: str
     search_mode: str
     query_type: str | None = None
@@ -80,7 +73,7 @@ class QueryLogBase(SQLModel):
 
 class QueryLog(QueryLogBase, table=True):
     """Query log database table for analytics."""
-    
+
     __tablename__ = "query_logs"
     
     id: int | None = Field(default=None, primary_key=True)
@@ -91,11 +84,11 @@ class QueryLog(QueryLogBase, table=True):
 
 class EmbeddingCache(SQLModel, table=True):
     """Cache for embeddings to avoid recomputation."""
-    
+
     __tablename__ = "embedding_cache"
     
     id: int | None = Field(default=None, primary_key=True)
     text_hash: str = Field(..., unique=True, index=True)
-    embedding: bytes  # Serialized numpy array
+    embedding: bytes
     model_name: str
     created_at: datetime = Field(default_factory=datetime.utcnow)

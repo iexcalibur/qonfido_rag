@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""
-Qonfido RAG - Test Query Script
-================================
-Quick test script to run queries against the RAG system.
-
-Usage:
-    python -m scripts.test_query "What is a mutual fund?"
-    python -m scripts.test_query "Best Sharpe ratio funds" --mode semantic
-    python -m scripts.test_query "Low risk funds" --no-rerank
-"""
+"""Quick test script to run queries against the RAG system."""
 
 import argparse
 import asyncio
@@ -16,7 +7,6 @@ import logging
 import sys
 from pathlib import Path
 
-# Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.api.schemas import SearchMode
@@ -39,11 +29,9 @@ async def run_query(
     print(f"MODE:  {search_mode} | TOP_K: {top_k} | RERANK: {rerank}")
     print("=" * 60)
 
-    # Initialize pipeline
     pipeline = get_pipeline()
     pipeline.initialize()
 
-    # Run query
     response = await pipeline.process(
         query=query,
         search_mode=SearchMode(search_mode),
@@ -51,29 +39,25 @@ async def run_query(
         rerank=rerank,
     )
 
-    # Print answer
-    print("\n📝 ANSWER:")
+    print("\nANSWER:")
     print("-" * 40)
     print(response.answer)
 
-    # Print metadata
-    print("\n📊 METADATA:")
+    print("\nMETADATA:")
     print(f"  Query Type:  {response.query_type}")
     print(f"  Confidence:  {response.confidence:.2f}")
     print(f"  Search Mode: {response.search_mode.value}")
 
-    # Print sources
     if response.sources:
-        print(f"\n📚 SOURCES ({len(response.sources)}):")
+        print(f"\nSOURCES ({len(response.sources)}):")
         print("-" * 40)
         for i, src in enumerate(response.sources, 1):
             print(f"  [{i}] ({src.source.upper()}) {src.id}")
             print(f"      Score: {src.score:.4f}")
             print(f"      Text: {src.text[:100]}...")
 
-    # Print funds
     if response.funds:
-        print(f"\n💰 FUNDS ({len(response.funds)}):")
+        print(f"\nFUNDS ({len(response.funds)}):")
         print("-" * 40)
         for fund in response.funds:
             parts = [fund.fund_name]
@@ -81,7 +65,7 @@ async def run_query(
                 parts.append(f"Sharpe: {fund.sharpe_ratio:.2f}")
             if fund.cagr_3yr:
                 parts.append(f"3Y CAGR: {fund.cagr_3yr:.2f}%")
-            print(f"  • {' | '.join(parts)}")
+            print(f"  - {' | '.join(parts)}")
 
     print("\n" + "=" * 60)
 
@@ -137,7 +121,7 @@ def main():
         print("\nCancelled")
         sys.exit(130)
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nERROR: {e}")
         if args.verbose:
             import traceback
             traceback.print_exc()
