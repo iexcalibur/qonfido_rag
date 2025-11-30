@@ -1,6 +1,7 @@
+````markdown
 # 📊 Qonfido RAG System - Data Flow Diagrams
 
-> **Visual representation of data movement through the RAG system**  
+> **Visual representation of data movement through the RAG system**  
 
 > **Format:** Mermaid diagrams (render in GitHub, VS Code, or Mermaid Live Editor)
 
@@ -9,23 +10,14 @@
 ## 📋 Table of Contents
 
 1. [High-Level System Overview](#1-high-level-system-overview)
-
 2. [Backend RAG Pipeline Flow](#2-backend-rag-pipeline-flow)
-
 3. [Hybrid Search Flow (Parallel Retrieval)](#3-hybrid-search-flow-parallel-retrieval)
-
 4. [Frontend Chat Flow](#4-frontend-chat-flow)
-
 5. [Fund Explorer Flow](#5-fund-explorer-flow)
-
 6. [Data Ingestion & Indexing Flow](#6-data-ingestion--indexing-flow)
-
 7. [Query Processing Flow (Detailed)](#7-query-processing-flow-detailed)
-
 8. [Database & Cache Flow](#8-database--cache-flow)
-
 9. [Complete End-to-End Flow](#9-complete-end-to-end-flow)
-
 10. [Response Generation Flow](#10-response-generation-flow)
 
 ---
@@ -35,39 +27,39 @@
 ```mermaid
 flowchart TB
     subgraph Input ["📁 INPUT LAYER"]
-        USER_QUERY[User Query<br/>Text Question]
-        CSV_FILES[CSV Files<br/>faqs.csv, funds.csv]
+        USER_QUERY["User Query<br/>Text Question"]
+        CSV_FILES["CSV Files<br/>faqs.csv, funds.csv"]
     end
 
     subgraph Frontend ["🖥️ FRONTEND LAYER"]
-        HOME[Homepage<br/>Landing Page]
-        CHAT[Chat Interface<br/>AI Co-Pilot]
-        FUNDS[Fund Explorer<br/>Browse & Filter]
+        HOME["Homepage<br/>Landing Page"]
+        CHAT["Chat Interface<br/>AI Co-Pilot"]
+        FUNDS["Fund Explorer<br/>Browse & Filter"]
     end
 
     subgraph Backend ["⚙️ BACKEND LAYER"]
-        API[REST API<br/>FastAPI]
+        API["REST API<br/>FastAPI"]
         
         subgraph RAG_PIPELINE ["RAG Pipeline"]
-            INGEST[Ingestion<br/>Data Loading]
-            RETRIEVE[Retrieval<br/>Hybrid Search]
-            GENERATE[Generation<br/>Claude LLM]
+            INGEST["Ingestion<br/>Data Loading"]
+            RETRIEVE["Retrieval<br/>Hybrid Search"]
+            GENERATE["Generation<br/>Claude LLM"]
         end
         
-        VALIDATE[Validation<br/>& Confidence]
+        VALIDATE["Validation<br/>Pydantic Schemas"]
     end
 
     subgraph Storage ["💾 STORAGE LAYER"]
-        CHROMADB[(ChromaDB<br/>Vector Store)]
-        BM25_INDEX[BM25 Index<br/>Lexical Search]
-        CACHE[In-Memory<br/>Cache]
-        SQLITE[(SQLite<br/>Metadata)]
+        CHROMADB[("ChromaDB<br/>Vector Store")]
+        BM25_INDEX["BM25 Index<br/>Lexical Search"]
+        CACHE["In-Memory Cache<br/>(Active & Integrated)"]
+        SQLITE[("SQLite<br/>(Optional/Inactive)")]
     end
 
     subgraph External ["🌐 EXTERNAL SERVICES"]
-        CLAUDE[Claude API<br/>Anthropic]
-        COHERE[Cohere API<br/>Reranking]
-        HUGGINGFACE[HuggingFace<br/>BGE-M3 Model]
+        CLAUDE["Claude API<br/>Anthropic"]
+        COHERE["Cohere API<br/>Reranking"]
+        HUGGINGFACE["HuggingFace<br/>BGE-M3 Model"]
     end
 
     %% User flow
@@ -112,11 +104,11 @@ flowchart TB
     class API,INGEST,RETRIEVE,GENERATE,VALIDATE backendStyle
     class CHROMADB,BM25_INDEX,CACHE,SQLITE storageStyle
     class CLAUDE,COHERE,HUGGINGFACE externalStyle
-```
+````
 
----
+-----
 
-## 2. Backend RAG Pipeline Flow
+## 2\. Backend RAG Pipeline Flow
 
 ```mermaid
 flowchart TD
@@ -195,9 +187,9 @@ flowchart TD
     class SEARCH_MODE,RERANK_CHECK decisionStyle
 ```
 
----
+-----
 
-## 3. Hybrid Search Flow (Parallel Retrieval)
+## 3\. Hybrid Search Flow (Parallel Retrieval)
 
 ```mermaid
 flowchart TD
@@ -234,7 +226,7 @@ flowchart TD
 
     subgraph RRFFormula ["📐 RRF Formula"]
         direction LR
-        RRF_FORMULA[RRF_score =<br/>(1-α) × 1/(k+lexical_rank) +<br/>α × 1/(k+semantic_rank)]
+        RRF_FORMULA["RRF_score =<br/>(1-α) × 1/(k+lexical_rank) +<br/>α × 1/(k+semantic_rank)"]
         RRF_PARAMS[k=60, α=0.5<br/>Default values]
     end
 
@@ -265,9 +257,9 @@ flowchart TD
     class TOP_K,OUTPUT outputStyle
 ```
 
----
+-----
 
-## 4. Frontend Chat Flow
+## 4\. Frontend Chat Flow
 
 ```mermaid
 flowchart TD
@@ -275,7 +267,7 @@ flowchart TD
 
     INIT --> URL_CHECK{URL has<br/>query param?}
 
-    URL_CHECK -->|Yes ?q=query| LOAD_QUERY[Load Query from URL<br/>useSearchParams]
+    URL_CHECK -->|Yes ?q=query| LOAD_QUERY["Load Query from URL<br/>useSearchParams"]
     URL_CHECK -->|No| WELCOME[Show Welcome Message<br/>WelcomeMessage Component]
 
     LOAD_QUERY --> CHECK_PROCESSED{Already<br/>Processed?}
@@ -287,109 +279,76 @@ flowchart TD
     WELCOME --> USER_INPUT[User Types Query<br/>ChatInput Component]
 
     USER_INPUT --> SEARCH_MODE{Select<br/>Search Mode?}
-
-    SEARCH_MODE -->|Lexical| MODE_LEX[Set Mode:<br/>lexical]
-    SEARCH_MODE -->|Semantic| MODE_SEM[Set Mode:<br/>semantic]
-    SEARCH_MODE -->|Hybrid| MODE_HYB[Set Mode:<br/>hybrid]
-
-    MODE_LEX --> SUBMIT
-    MODE_SEM --> SUBMIT
-    MODE_HYB --> SUBMIT
+    SEARCH_MODE -->|Lexical| MODE_LEX[Set Mode: lexical]
+    SEARCH_MODE -->|Semantic| MODE_SEM[Set Mode: semantic]
+    SEARCH_MODE -->|Hybrid| MODE_HYB[Set Mode: hybrid]
+    MODE_LEX & MODE_SEM & MODE_HYB --> SUBMIT
 
     USER_INPUT --> SUBMIT[User Submits<br/>Enter or Button]
 
-    SUBMIT --> CREATE_USER_MSG[Create User Message<br/>ChatMessage Object]
-
-    CREATE_USER_MSG --> CREATE_AI_MSG[Create AI Message<br/>with isLoading=true]
-
-    CREATE_AI_MSG --> ADD_MESSAGES[Add to Messages Array<br/>State Update]
-
-    ADD_MESSAGES --> SCROLL[Auto-scroll to Bottom<br/>scrollRef]
-
-    SCROLL --> API_CALL[Call Backend API<br/>lib/api.ts → sendQuery]
-
-    API_CALL --> LOADING[Show Loading State<br/>Loader2 Spinner]
-
-    subgraph BackendCall ["🌐 API CALL"]
+    subgraph UseChatHook ["🪝 useChat Hook Logic"]
         direction TB
-        LOADING --> POST[POST /api/v1/query<br/>with search_mode]
-        POST --> WAIT[Wait for Response<br/>~1.5-4 seconds]
-        WAIT --> RESPONSE[Receive QueryResponse<br/>JSON]
+        SUBMIT --> SET_LOADING[Set isLoading = true]
+        SET_LOADING --> ADD_USER_MSG[Add User Message<br/>to State]
+        ADD_USER_MSG --> API_CALL[Call Backend API<br/>lib/api.ts → sendQuery]
+        API_CALL --> LOADING[Show Loading State<br/>Loader2 Spinner]
+        
+        LOADING --> RESPONSE[Receive QueryResponse<br/>JSON]
+        
+        RESPONSE --> TRANSFORM[Transform Data<br/>Funds & Citations]
+        TRANSFORM --> UPDATE_STATE[Update Messages State<br/>with AI Response]
     end
-
-    RESPONSE --> CHECK_ERROR{Error?}
-
-    CHECK_ERROR -->|Yes| ERROR_HANDLE[Show Error Message<br/>Display in ChatMessage]
-    CHECK_ERROR -->|No| PARSE[Parse Response<br/>Extract Data]
-
-    PARSE --> TRANSFORM[Transform Data<br/>for Display]
-
-    subgraph TransformData ["🔄 DATA TRANSFORMATION"]
-        direction TB
-        TRANSFORM --> FUNDS_DATA[Extract Funds<br/>FundInfo[]]
-        TRANSFORM --> CITATIONS[Create Citations<br/>MessageCitation[]]
-        TRANSFORM --> CONF[Extract Confidence<br/>Number]
-        TRANSFORM --> QUERY_TYPE[Extract Query Type<br/>faq/numerical/hybrid]
-    end
-
-    FUNDS_DATA --> UPDATE_MSG[Update AI Message<br/>Replace isLoading]
-    CITATIONS --> UPDATE_MSG
-    CONF --> UPDATE_MSG
-    QUERY_TYPE --> UPDATE_MSG
-
-    UPDATE_MSG --> RENDER[Render ChatMessage<br/>Component]
 
     subgraph MessageRendering ["🎨 MESSAGE RENDERING"]
         direction TB
-        RENDER --> MSG_CONTENT[Display Text Content<br/>AI Response]
-        RENDER --> FUND_CARDS{Funds<br/>Available?}
-        FUND_CARDS -->|Yes| FUND_GRID[FundAnalysisResults<br/>Grid of FundInsightCard]
-        FUND_CARDS -->|No| SKIP_FUNDS
-        FUND_GRID --> METRICS[Display Metrics<br/>CAGR, Sharpe, Volatility]
-        METRICS --> SKIP_FUNDS[Skip Fund Display]
-        SKIP_FUNDS --> CITATIONS_CHIP{Citations<br/>Available?}
-        CITATIONS_CHIP -->|Yes| CIT_CHIPS[CitationChip Components<br/>Source Badges]
-        CITATIONS_CHIP -->|No| DONE
-        CIT_CHIPS --> DONE[Complete]
+        UPDATE_STATE --> RENDER_MSG[Render ChatMessage]
+        
+        RENDER_MSG --> CONTENT[Display Answer Text]
+        RENDER_MSG --> FUND_GRID["FundAnalysisResults<br/>(Grid of FundInsightCard)"]
+        
+        FUND_GRID --> CARD_DETAILS[" Fund Card Metrics:<br/>• CAGR (Returns)<br/>• Sharpe Ratio (Progress Bar)<br/>• Volatility (Risk Label)"]
+        
+        RENDER_MSG --> CITATIONS["CitationChips<br/>(Source Badges with Score)"]
     end
+    
+    CARD_DETAILS --> DONE
+    CITATIONS --> DONE
 
-    MSG_CONTENT --> FUND_CARDS
-    DONE --> SCROLL_BOTTOM[Scroll to Bottom<br/>After Render]
+    DONE --> SCROLL_BOTTOM[Auto-scroll to Bottom<br/>scrollRef]
 
-    ERROR_HANDLE --> END
     SCROLL_BOTTOM --> END([✅ Complete])
 
     %% Styling
     classDef inputStyle fill:#e1f5ff,stroke:#01579b,stroke-width:3px
     classDef processStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    classDef apiStyle fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef hookStyle fill:#e1bee7,stroke:#4a148c,stroke-width:2px
     classDef renderStyle fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
     classDef outputStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px
-    classDef decisionStyle fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px
+    classDef loadingStyle fill:#424242,stroke:#212121,stroke-width:2px,color:#ffffff
 
     class START,USER_INPUT inputStyle
-    class INIT,CREATE_USER_MSG,CREATE_AI_MSG,ADD_MESSAGES,SCROLL,TRANSFORM processStyle
-    class API_CALL,LOADING,POST,WAIT,RESPONSE apiStyle
-    class RENDER,MSG_CONTENT,FUND_GRID,METRICS,CIT_CHIPS renderStyle
+    class INIT,LOAD_QUERY,PREVENT_DOUBLE,CHECK_PROCESSED processStyle
+    class SET_LOADING,ADD_USER_MSG,API_CALL,RESPONSE,TRANSFORM,UPDATE_STATE hookStyle
+    class RENDER_MSG,CONTENT,FUND_GRID,CARD_DETAILS,CITATIONS renderStyle
     class END outputStyle
-    class URL_CHECK,CHECK_PROCESSED,SEARCH_MODE,CHECK_ERROR,FUND_CARDS,CITATIONS_CHIP decisionStyle
+    class LOADING loadingStyle
 ```
 
----
+-----
 
-## 5. Fund Explorer Flow
+## 5\. Fund Explorer Flow
 
 ```mermaid
 flowchart TD
     START([User Opens<br/>/funds Page]) --> INIT[Initialize Funds Page<br/>useState hooks]
 
-    INIT --> LOAD_FUNDS[Fetch Funds from API<br/>getFunds()]
+    INIT --> LOAD_FUNDS["Fetch Funds from API<br/>getFunds()"]
 
     LOAD_FUNDS --> API_CALL[GET /api/v1/funds<br/>Backend API]
 
     API_CALL --> LOADING[Show Loading State<br/>Loader2 Spinner]
 
-    LOADING --> RESPONSE[Receive FundListResponse<br/>funds[] + total]
+    LOADING --> RESPONSE["Receive FundListResponse<br/>funds[] + total"]
 
     RESPONSE --> SET_STATE[Set Funds State<br/>useState update]
 
@@ -424,7 +383,7 @@ flowchart TD
 
     UPDATE_GRID --> DISPLAY_FUNDS[Display Fund Cards<br/>with Metrics]
 
-    FUND_CLICK --> NAVIGATE[Navigate to<br/>/funds/[fundId]]
+    FUND_CLICK --> NAVIGATE["Navigate to<br/>/funds/[fundId]"]
 
     NAVIGATE --> DETAIL_PAGE[Fund Detail Page<br/>Load fund data]
 
@@ -447,94 +406,82 @@ flowchart TD
     classDef renderStyle fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
     classDef actionStyle fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
     classDef decisionStyle fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px
+    classDef loadingStyle fill:#424242,stroke:#212121,stroke-width:2px,color:#ffffff
 
     class START inputStyle
-    class LOAD_FUNDS,API_CALL,LOADING,RESPONSE,SET_STATE apiStyle
+    class LOAD_FUNDS,API_CALL,RESPONSE,SET_STATE apiStyle
     class SEARCH_INPUT,CLIENT_FILTER,SEARCH_TEXT,FILTER_CATEGORY,COMBINE,FILTERED filterStyle
     class RENDER_UI,UPDATE_GRID,DISPLAY_FUNDS renderStyle
     class FUND_CLICK,ASK_AI_BUTTON,NAVIGATE,NAVIGATE_CHAT actionStyle
     class USER_ACTION decisionStyle
+    class LOADING loadingStyle
 ```
 
----
+-----
 
-## 6. Data Ingestion & Indexing Flow
+## 6\. Data Ingestion & Indexing Flow
 
 ```mermaid
 flowchart TD
     START([Startup/<br/>Pipeline.initialize]) --> LOAD_CSV[Load CSV Files<br/>DataLoader.load_all]
 
     LOAD_CSV --> LOAD_FAQS[Load FAQs<br/>from faqs.csv]
-
     LOAD_FAQS --> PARSE_FAQS[Parse FAQ Rows<br/>FAQItem objects]
-
-    PARSE_FAQS --> FAQ_DOCS[Create FAQ Documents<br/>text_for_embedding]
+    PARSE_FAQS --> FAQ_DOCS[Create FAQ Documents<br/>Combine Q&A]
 
     LOAD_CSV --> LOAD_FUNDS[Load Funds<br/>from funds.csv]
-
     LOAD_FUNDS --> PARSE_FUNDS[Parse Fund Rows<br/>FundData objects]
 
-    PARSE_FUNDS --> FUND_DOCS[Create Fund Documents<br/>Numerical → Text Conversion<br/>CAGR, Sharpe, Volatility]
+    subgraph TextConversion ["🔤 CRITICAL: Numerical to Text"]
+        PARSE_FUNDS --> PROP_ACCESS["Access Property:<br/>FundData.text_for_embedding"]
+        PROP_ACCESS --> FORMAT_STR["Format String:<br/>'Fund X: 3yr CAGR 15.2%,<br/>Sharpe 1.25...'"]
+        FORMAT_STR --> FUND_DOCS[Create Fund Documents<br/>Ready for Embedding]
+    end
 
     FAQ_DOCS --> COMBINE[Combine All Documents<br/>FAQs + Funds]
-
     FUND_DOCS --> COMBINE
 
     COMBINE --> CLEAR_INDEXES[Clear Existing Indexes<br/>Fresh data from CSV]
 
-    CLEAR_INDEXES --> CLEAR_CHROMA[Clear ChromaDB<br/>Collection]
-
+    CLEAR_INDEXES --> CLEAR_CHROMA[Clear ChromaDB]
     CLEAR_INDEXES --> CLEAR_BM25[Clear BM25 Index]
 
-    CLEAR_CHROMA --> GEN_EMBEDDINGS[Generate Embeddings<br/>Batch Processing<br/>BGE-M3 Model]
-
-    GEN_EMBEDDINGS --> CHECK_CACHE{Check<br/>Embedding Cache?}
-
-    CHECK_CACHE -->|Hit| USE_CACHED[Use Cached<br/>Embeddings]
-    CHECK_CACHE -->|Miss| GEN_NEW[Generate New<br/>Embeddings]
-
-    GEN_NEW --> SAVE_TO_CACHE[Save to Cache<br/>24hr TTL]
+    CLEAR_CHROMA --> GEN_EMBEDDINGS[Generate Embeddings<br/>BGE-M3 Model]
+    
+    GEN_EMBEDDINGS --> CHECK_CACHE{Check<br/>Cache?}
+    CHECK_CACHE -->|Hit| USE_CACHED[Use Cached]
+    CHECK_CACHE -->|Miss| GEN_NEW[Generate New]
+    GEN_NEW --> SAVE_TO_CACHE[Save to Cache]
 
     USE_CACHED --> INDEX_SEMANTIC
     SAVE_TO_CACHE --> INDEX_SEMANTIC
 
-    INDEX_SEMANTIC[Index in ChromaDB<br/>Vector Store<br/>with Metadata] --> INDEX_LEXICAL
+    INDEX_SEMANTIC[Index in ChromaDB<br/>Vector Store] --> INDEX_LEXICAL
+    INDEX_LEXICAL[Index in BM25<br/>Lexical Search] --> CACHE_FUNDS
 
-    INDEX_LEXICAL[Index in BM25<br/>Lexical Search<br/>Tokenized Documents] --> CACHE_FUNDS
+    CACHE_FUNDS[Cache Funds Data<br/>In-Memory (Fast Access)] --> READY
 
-    CACHE_FUNDS[Cache Funds Data<br/>In-Memory<br/>Fast Access] --> READY
-
-    READY[✅ System Ready<br/>Accept Queries] --> WAIT
-
-    WAIT([Wait for Queries])
-
-    subgraph DocumentCreation ["📄 DOCUMENT CREATION"]
-        direction TB
-        FAQ_DOCS --> FAQ_TEXT["FAQ Text:<br/>Q: What is...?<br/>A: ..."]
-        FUND_DOCS --> FUND_TEXT["Fund Text:<br/>Fund Name: X<br/>3-year CAGR: 15.2%<br/>Sharpe Ratio: 1.25<br/>..."]
-    end
+    READY[✅ System Ready<br/>Accept Queries]
 
     %% Styling
     classDef inputStyle fill:#e1f5ff,stroke:#01579b,stroke-width:3px
     classDef loadStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef criticalStyle fill:#ffcdd2,stroke:#b71c1c,stroke-width:2px,stroke-dasharray: 5 5
     classDef processStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
     classDef indexStyle fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
-    classDef cacheStyle fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
     classDef readyStyle fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px
-    classDef decisionStyle fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px
 
     class START inputStyle
     class LOAD_CSV,LOAD_FAQS,LOAD_FUNDS loadStyle
     class PARSE_FAQS,PARSE_FUNDS,FAQ_DOCS,FUND_DOCS,COMBINE processStyle
-    class CLEAR_INDEXES,CLEAR_CHROMA,CLEAR_BM25,INDEX_SEMANTIC,INDEX_LEXICAL indexStyle
-    class GEN_EMBEDDINGS,CHECK_CACHE,USE_CACHED,GEN_NEW,SAVE_TO_CACHE,CACHE_FUNDS cacheStyle
-    class READY,WAIT readyStyle
-    class CHECK_CACHE decisionStyle
+    class PROP_ACCESS,FORMAT_STR criticalStyle
+    class CLEAR_INDEXES,INDEX_SEMANTIC,INDEX_LEXICAL indexStyle
+    class READY readyStyle
 ```
 
----
+-----
 
-## 7. Query Processing Flow (Detailed)
+## 7\. Query Processing Flow (Detailed)
 
 ```mermaid
 flowchart TD
@@ -639,98 +586,78 @@ flowchart TD
     class MODE_CHECK,FILTER,RERANK_CHECK decisionStyle
 ```
 
----
+-----
 
-## 8. Database & Cache Flow
+## 8\. Database & Cache Flow
 
 ```mermaid
 flowchart TD
     subgraph Input ["📥 INPUT"]
         QUERY_EMBED[Query Embedding<br/>1024-dim vector]
         DOCUMENTS[Documents<br/>Text + Metadata]
-        QUERY_RESULT[Query Response<br/>QueryResponse object]
     end
 
-    subgraph EmbeddingCache ["🔵 EMBEDDING CACHE"]
+    subgraph EmbeddingCache ["🔵 EMBEDDING CACHE (Active & Integrated)"]
         CHECK_EMBED{Query Embedding<br/>in Cache?}
-        CHECK_EMBED -->|Hit| GET_EMBED[Return Cached<br/>Embedding<br/>~10ms]
-        CHECK_EMBED -->|Miss| STORE_EMBED[Generate & Store<br/>TTL: 24 hours]
+        CHECK_EMBED -.->|Hit| GET_EMBED[Return Cached<br/>Embedding]
+        CHECK_EMBED -.->|Miss| STORE_EMBED[Generate & Store<br/>TTL: 24 hours]
     end
 
-    subgraph QueryCache ["🟢 QUERY CACHE"]
+    subgraph QueryCache ["🟢 QUERY CACHE (Active & Integrated)"]
         CHECK_QUERY{Query + Mode<br/>in Cache?}
-        CHECK_QUERY -->|Hit| GET_QUERY[Return Cached<br/>Response<br/>~50ms]
-        CHECK_QUERY -->|Miss| STORE_QUERY[Store Response<br/>TTL: 5 minutes]
+        CHECK_QUERY -.->|Hit| GET_QUERY[Return Cached<br/>Response]
+        CHECK_QUERY -.->|Miss| STORE_QUERY[Store Response<br/>TTL: 5 minutes]
     end
 
-    subgraph ChromaDB ["💜 CHROMADB VECTOR STORE"]
+    subgraph ChromaDB ["💜 CHROMADB (Active)"]
         CHROMA_WRITE[Write Documents<br/>with Embeddings]
         CHROMA_READ[Read Similar<br/>Documents]
-        CHROMA_CLEAR[Clear Collection<br/>on Re-index]
+        CHROMA_CLEAR[Clear Collection<br/>on Startup]
     end
 
-    subgraph BM25Index ["🟡 BM25 LEXICAL INDEX"]
+    subgraph BM25Index ["🟡 BM25 INDEX (Active)"]
         BM25_WRITE[Index Documents<br/>Tokenized]
         BM25_READ[Search Index<br/>BM25 Scoring]
-        BM25_CLEAR[Clear Index<br/>on Re-index]
     end
 
-    subgraph SQLite ["🗄️ SQLITE DATABASE"]
-        direction TB
+    subgraph SQLite ["🗄️ SQLITE (Optional/Inactive)"]
         DB_WRITE[Write Metadata<br/>Funds, FAQs]
-        DB_READ[Read Metadata<br/>Fast Lookup]
-        DB_CLEAR[Clear Tables<br/>Optional]
+        DB_READ[Read Metadata]
     end
 
-    QUERY_EMBED --> CHECK_EMBED
+    QUERY_EMBED --> CHROMA_READ
     DOCUMENTS --> CHROMA_WRITE
     DOCUMENTS --> BM25_WRITE
-    DOCUMENTS --> DB_WRITE
 
-    GET_EMBED --> CHROMA_READ
-    GET_EMBED --> BM25_READ
-
+    %% Dotted lines indicate logical flow, solid for primary path
+    QUERY_EMBED -.-> CHECK_EMBED
+    
     CHROMA_READ --> RESULTS
     BM25_READ --> RESULTS
 
-    RESULTS[Search Results] --> CHECK_QUERY
+    RESULTS[Search Results] -.-> CHECK_QUERY
 
-    QUERY_RESULT --> STORE_QUERY
-
-    STORE_EMBED --> CHROMA_WRITE
-
-    subgraph CacheStrategy ["⚙️ CACHE STRATEGY"]
+    subgraph CacheStrategy ["⚙️ CACHE STRATEGY (Defined in services/cache.py)"]
         direction LR
         STRATEGY["Embedding Cache:<br/>Hash(embedding) → Vector<br/>Query Cache:<br/>Hash(query+mode+top_k) → Response"]
         TTL["TTL:<br/>Embeddings: 24hr<br/>Queries: 5min"]
     end
 
-    CHECK_EMBED -.->|Cache Miss| STRATEGY
-    CHECK_QUERY -.->|Cache Miss| STRATEGY
-
-    %% Performance Metrics
-    GET_EMBED -.->|Performance| FAST_EMBED["⚡ 10ms<br/>vs 50ms"]
-    GET_QUERY -.->|Performance| FAST_QUERY["⚡ 50ms<br/>vs 2-4s"]
-
     %% Styling
     classDef inputStyle fill:#e1f5ff,stroke:#01579b,stroke-width:2px
-    classDef cacheStyle fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    classDef storageStyle fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
-    classDef dbStyle fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
-    classDef perfStyle fill:#ffebee,stroke:#c62828,stroke-width:1px,stroke-dasharray: 5 5
-    classDef decisionStyle fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px
+    classDef activeStyle fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    classDef infraStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,stroke-dasharray: 5 5
+    classDef dbStyle fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,stroke-dasharray: 5 5
 
-    class QUERY_EMBED,DOCUMENTS,QUERY_RESULT inputStyle
-    class CHECK_EMBED,GET_EMBED,STORE_EMBED,CHECK_QUERY,GET_QUERY,STORE_QUERY cacheStyle
-    class CHROMA_WRITE,CHROMA_READ,CHROMA_CLEAR,BM25_WRITE,BM25_READ,BM25_CLEAR storageStyle
-    class DB_WRITE,DB_READ,DB_CLEAR dbStyle
-    class FAST_EMBED,FAST_QUERY perfStyle
-    class CHECK_EMBED,CHECK_QUERY decisionStyle
+    class QUERY_EMBED,DOCUMENTS inputStyle
+    class CHROMA_WRITE,CHROMA_READ,CHROMA_CLEAR,BM25_WRITE,BM25_READ activeStyle
+    class CHECK_EMBED,GET_EMBED,STORE_EMBED,CHECK_QUERY,GET_QUERY,STORE_QUERY infraStyle
+    class DB_WRITE,DB_READ dbStyle
 ```
 
----
+-----
 
-## 9. Complete End-to-End Flow
+## 9\. Complete End-to-End Flow
 
 ```mermaid
 flowchart TD
@@ -742,7 +669,7 @@ flowchart TD
     ACTION -->|Browse Funds| FUNDS_PAGE[Fund Explorer<br/>/funds]
 
     subgraph ChatFlow ["💬 CHAT FLOW"]
-        CHAT_PAGE --> USER_TYPES[User Types Query<br/>"Best Sharpe ratio funds"]
+        CHAT_PAGE --> USER_TYPES["User Types Query<br/>'Best Sharpe ratio funds'"]
         USER_TYPES --> SELECT_MODE[Select Search Mode<br/>Lexical/Semantic/Hybrid]
         SELECT_MODE --> SUBMIT[Submit Query<br/>ChatInput Component]
         SUBMIT --> FRONTEND_API[Frontend API Call<br/>lib/api.ts]
@@ -753,7 +680,7 @@ flowchart TD
         LOAD_FUNDS --> DISPLAY_GRID[Display Grid<br/>Fund Cards]
         DISPLAY_GRID --> USER_CLICKS{User<br/>Action?}
         USER_CLICKS -->|Ask AI| NAV_TO_CHAT[Navigate to Chat<br/>with Pre-filled Query]
-        USER_CLICKS -->|View Details| NAV_TO_DETAIL[Fund Detail Page<br/>/funds/[fundId]]
+        USER_CLICKS -->|View Details| NAV_TO_DETAIL["Fund Detail Page<br/>/funds/[fundId]"]
         NAV_TO_CHAT --> CHAT_PAGE
     end
 
@@ -813,9 +740,9 @@ flowchart TD
     class ACTION,USER_CLICKS,DISPLAY_FUNDS decisionStyle
 ```
 
----
+-----
 
-## 10. Response Generation Flow
+## 10\. Response Generation Flow
 
 ```mermaid
 flowchart TD
@@ -905,104 +832,5 @@ flowchart TD
     class QUERY_TYPE,PARSE_JSON,VALIDATE_RESPONSE decisionStyle
 ```
 
----
-
-## 🎯 Quick Reference Summary
-
-### Data Transformation Chain
-
 ```
-CSV Files → Documents → Embeddings → Vector Index → Search → LLM → Response → UI
 ```
-
-### Key Decision Points
-
-1. **Which Search Mode?** Lexical (fast, exact) / Semantic (contextual) / Hybrid (best)
-2. **Use Cache?** Check embedding cache → Check query cache
-3. **Parallel Retrieval?** Hybrid search uses ThreadPoolExecutor for 40-50% speedup
-4. **Rerank?** Optional Cohere reranking for better precision
-5. **Valid Response?** Confidence score calculation and validation
-
-### Performance Flow
-
-```
-User Query → Embed (50ms) → Search (20-100ms) → Rerank (200ms) → LLM (1-3s) → Response
-              ↓ Cache Hit
-           10ms              ↓ Cache Hit
-                         50ms
-```
-
-### Cost Flow (Hybrid Search)
-
-```
-80% → Tier 1 (Regex) - FREE
-15% → Tier 2 (LayoutLMv3) - FREE  
-4%  → Tier 3 (OCR+LLM) - ~$0.01
-1%  → Tier 4 (Vision) - ~$0.05
-────────────────────────────────
-Average: ~$0.005 per query
-```
-
----
-
-## 📖 How to View These Diagrams
-
-### Option 1: GitHub (Automatic Rendering)
-
-1. Push to GitHub
-2. Open this file - diagrams render automatically
-
-### Option 2: VS Code (With Extension)
-
-1. Install "Markdown Preview Mermaid Support" extension
-2. Open this file
-3. Click Preview button (Cmd+Shift+V / Ctrl+Shift+V)
-
-### Option 3: Mermaid Live Editor
-
-1. Go to https://mermaid.live
-2. Copy any diagram code (between ```mermaid tags)
-3. Paste and view
-
-### Option 4: Mermaid CLI
-
-```bash
-# Install
-npm install -g @mermaid-js/mermaid-cli
-
-# Render to PNG
-mmdc -i DATA_FLOW_DIAGRAMS.md -o flow_diagrams.png
-
-# Render all diagrams
-mmdc -i DATA_FLOW_DIAGRAMS.md -o diagrams/ -e png
-```
-
----
-
-## 🎨 Diagram Legend
-
-### Colors & Meanings
-
-- 🔵 **Blue** - Input/Output data
-- 🟡 **Yellow** - Processing/Extraction
-- 🟢 **Green** - Success/Valid data
-- 🔴 **Red** - Error/Invalid data
-- 🟣 **Purple** - Decision points
-- 🟠 **Orange** - Configuration/Settings
-
-### Shape Meanings
-
-- **Rectangle** - Process step
-- **Diamond** - Decision point
-- **Cylinder** - Database
-- **Parallelogram** - Input/Output
-- **Rounded rectangle** - Start/End
-- **Dashed box** - Optional/Conditional
-- **Subgraph** - Grouped components
-
----
-
-**🎉 Complete visual documentation of data flow through the Qonfido RAG system!**
-
-*These diagrams are living documents - update them as the system evolves.*
-
