@@ -568,6 +568,7 @@ Infrastructure Layer (External Services)
 
 ---
 
-For data flow details, see [Data Flow](data-flow.md).  
-For folder structure, see [Backend Structure](backend-structure.md) and [Frontend Structure](frontend-structure.md).
+For data flow details, see [Data Flow](./DATA_FLOW.md).  
+For project structure, see [Project Structure](./PROJECT_STRUCTURE.md).  
+For implementation details, see [Backend Documentation](./BACKEND_DOCUMENTATION.md) and [Frontend Documentation](./FRONTEND_DOCUMENTATION.md).
 

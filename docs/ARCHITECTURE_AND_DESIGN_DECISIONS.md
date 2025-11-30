@@ -641,6 +641,6 @@ The architecture is **production-ready for MVP scale** and has a **clear path to
 
 - [Backend Documentation](./BACKEND_DOCUMENTATION.md)
 - [Deep Architecture](./DEEP_ARCHITECTURE.md)
-- [Data Flow](./DATA_FLOW.md)
+- [Data Flow](./DATA_FLOW.md) - Visual flow diagrams
 - [Project Structure](./PROJECT_STRUCTURE.md)
 

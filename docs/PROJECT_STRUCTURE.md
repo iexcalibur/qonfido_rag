@@ -151,12 +151,12 @@ qonfido-rag/
 │   └── 📁 node_modules/                  # Node dependencies (gitignored)
 │
 ├── 📁 docs/                              # Documentation
-│   ├── 📄 PROJECT_STRUCTURE.md           # This file - project structure
-│   ├── 📄 BACKEND_STRUCTURE.md           # Backend folder structure overview
-│   ├── 📄 FRONTEND_STRUCTURE.md          # Frontend folder structure overview
-│   ├── 📄 DATA_FLOW.md                   # End-to-end data flow (ASCII)
-│   ├── 📄 DATA_FLOW_DIAGRAMS.md          # Visual flow diagrams (Mermaid)
-│   └── 📄 DEEP_ARCHITECTURE.md           # Deep technical architecture
+│   ├── 📄 PROJECT_STRUCTURE.md           # This file - complete project structure
+│   ├── 📄 BACKEND_DOCUMENTATION.md       # Comprehensive backend documentation
+│   ├── 📄 FRONTEND_DOCUMENTATION.md      # Comprehensive frontend documentation
+│   ├── 📄 DATA_FLOW.md                   # Visual flow diagrams (Mermaid)
+│   ├── 📄 DEEP_ARCHITECTURE.md           # Deep technical architecture
+│   └── 📄 ARCHITECTURE_AND_DESIGN_DECISIONS.md  # Architecture & design decisions
 │
 ├── 📁 infra/                             # Infrastructure configs
 │   ├── 📁 docker/                        # Docker configurations
@@ -253,13 +253,11 @@ qonfido-rag/
 ### Documentation (`/docs`)
 
 - **`PROJECT_STRUCTURE.md`**: This file - complete project structure
-- **`BACKEND_STRUCTURE.md`**: Backend folder organization and purposes
-- **`FRONTEND_STRUCTURE.md`**: Frontend folder organization and purposes
-- **`DATA_FLOW.md`**: ASCII-based end-to-end data flow diagrams
-- **`DATA_FLOW_DIAGRAMS.md`**: Visual Mermaid diagrams for data flow
+- **`BACKEND_DOCUMENTATION.md`**: Comprehensive backend implementation documentation
+- **`FRONTEND_DOCUMENTATION.md`**: Comprehensive frontend implementation documentation
+- **`DATA_FLOW.md`**: Visual Mermaid diagrams for data flow
 - **`DEEP_ARCHITECTURE.md`**: Detailed technical architecture documentation
-- **`BACKEND_DOCUMENTATION.md`**: Comprehensive backend file documentation
-- **`FRONTEND_DOCUMENTATION.md`**: Comprehensive frontend file documentation
+- **`ARCHITECTURE_AND_DESIGN_DECISIONS.md`**: Architecture, design reasoning, trade-offs, and scalability
 
 ---
 
@@ -319,7 +317,8 @@ qonfido-rag/
 ---
 
 For detailed information on each component, see:
-- [Backend Structure](BACKEND_STRUCTURE.md)
-- [Frontend Structure](FRONTEND_STRUCTURE.md)
-- [Deep Architecture](DEEP_ARCHITECTURE.md)
-- [Data Flow](DATA_FLOW.md)
+- [Backend Documentation](BACKEND_DOCUMENTATION.md) - Backend implementation details
+- [Frontend Documentation](FRONTEND_DOCUMENTATION.md) - Frontend implementation details
+- [Deep Architecture](DEEP_ARCHITECTURE.md) - Technical deep-dive
+- [Architecture & Design Decisions](ARCHITECTURE_AND_DESIGN_DECISIONS.md) - Design rationale and trade-offs
+- [Data Flow](DATA_FLOW.md) - Visual flow diagrams

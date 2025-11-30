@@ -389,7 +389,7 @@ qonfido-rag/
 - [Backend Architecture](docs/BACKEND_DOCUMENTATION.md) - Backend implementation details
 - [Frontend Architecture](docs/FRONTEND_DOCUMENTATION.md) - Frontend implementation details
 - [Deep Architecture](docs/DEEP_ARCHITECTURE.md) - Technical deep-dive
-- [Data Flow Diagrams](docs/DATA_FLOW_DIAGRAMS.md) - Visual flow diagrams
+- [Data Flow](docs/DATA_FLOW.md) - Visual flow diagrams (Mermaid)
 - [Project Structure](docs/PROJECT_STRUCTURE.md) - Complete project organization
 
 
