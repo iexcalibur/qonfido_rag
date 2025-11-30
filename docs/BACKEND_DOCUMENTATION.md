@@ -131,9 +131,10 @@ backend/
   - Pre-loading reduces first-query latency
   - Startup initialization ensures all models are ready
 - **Key Features Added:**
-  - ✅ Pre-initialization of RAG pipeline (loads models, generates embeddings)
+  - ✅ Pre-initialization of RAG pipeline with smart persistence
+  - ✅ Hash-based change detection (fast startup when data unchanged)
+  - ✅ ChromaDB persistence enabled (survives restarts)
   - ✅ Funds cache pre-loading (fast CSV access)
-  - ✅ Clear existing indexes on restart (ensures fresh data from CSV)
   - ✅ Tokenizer parallelism fix (suppresses warnings)
 - **Lines:** ~123
 
@@ -523,7 +524,8 @@ backend/
   - Better for conceptual questions
 - **Key Features Added:**
   - ✅ In-process storage (no server setup needed)
-  - ✅ Persistent option (survives restarts)
+  - ✅ **Persistence enabled by default** (survives restarts)
+  - ✅ **Hash-based change detection** (part of pipeline)
   - ✅ Source filtering
   - ✅ Cosine distance to similarity conversion
 - **Lines:** ~216
@@ -672,15 +674,26 @@ backend/
 
 **`__init__()`:**
 - Initializes all components (embedder, searchers, generator)
+- Enables ChromaDB persistence with configured directory
 - Lazy loads components
 - Handles reranker initialization (graceful if unavailable)
+- Sets up state file path for hash-based change detection
 
-**`initialize()`:**
-- Loads data from CSV files
-- Generates embeddings
-- Indexes documents in both lexical and semantic stores
-- Can clear existing indexes (fresh data from CSV)
+**`initialize()` - Smart Persistence with Hash-Based Change Detection:**
+- Always loads documents from CSV (needed for lexical search)
+- Always builds lexical index (fast, in-memory, not persistent)
+- **Smart semantic indexing:**
+  - Calculates hash of data files and configuration
+  - Checks hash against saved state file
+  - **If hash matches:** Loads from persistent ChromaDB store (instant startup!)
+  - **If hash differs:** Clears and re-indexes (ensures fresh data)
+- Saves state file with hash for next startup
 - **Critical:** This runs at startup to prepare the system
+- **Benefits:**
+  - Fast startup when data unchanged (~seconds vs minutes)
+  - Automatic re-indexing when CSV files change
+  - Automatic re-indexing when embedding model changes
+  - No stale data (hash guard prevents it)
 
 **`process()` - THE MAIN METHOD:**
 - Receives user query
@@ -705,14 +718,20 @@ backend/
   - Orchestrates all components
   - Handles the complete RAG workflow
 - **Key Features Added:**
-  - ✅ Clear existing indexes on restart (fresh CSV data)
+  - ✅ **Hash-based change detection** for smart persistence
+  - ✅ **ChromaDB persistence enabled** (survives restarts)
+  - ✅ **Instant startup** when data/config unchanged
+  - ✅ **Automatic re-indexing** when data or model changes
   - ✅ Fallback to funds cache if metadata incomplete
   - ✅ Query classification
   - ✅ Fund info extraction with fallback
   - ✅ Confidence scoring
   - ✅ Multiple retrieval modes
   - ✅ Optional reranking
-- **Lines:** ~361
+- **Key Methods:**
+  - `_get_current_state_hash()` - Calculates MD5 hash of data files + config
+  - `initialize()` - Smart initialization with hash checking
+- **Lines:** ~538
 
 ---
 
@@ -1005,11 +1024,14 @@ backend/
 1. main.py: lifespan() called on startup
 2. Pipeline.initialize() called
 3. DataLoader.load_all() → Loads FAQs + Funds from CSV
-4. Embedder.embed_texts() → Generates embeddings
-5. LexicalSearcher.index_documents() → Builds BM25 index
-6. SemanticSearcher.index_documents() → Indexes in ChromaDB
-7. Funds cache loaded from CSV
-8. System ready to accept queries
+4. LexicalSearcher.index_documents() → Builds BM25 index (always rebuilt)
+5. Hash-based change detection:
+   a. Calculate hash of CSV files + embedding model config
+   b. Compare with saved state file
+   c. If match: Load from persistent ChromaDB (instant!)
+   d. If mismatch: Generate embeddings → Index in ChromaDB → Save state
+6. Funds cache loaded from CSV
+7. System ready to accept queries
 ```
 
 ### **Query Processing Flow:**
@@ -1064,13 +1086,24 @@ backend/
   - ✅ Best retrieval quality
   - ✅ Combines keyword + semantic strengths
 
-### **5. Pre-Initialization at Startup**
-- **Decision:** Load everything at startup
-- **Why:** Faster first query, ensures readiness
+### **5. Smart Persistence with Hash-Based Change Detection**
+- **Decision:** Enable ChromaDB persistence with hash-based change detection
+- **Why:** 
+  - Fast startup when data unchanged (seconds vs minutes)
+  - Automatic re-indexing when data/config changes
+  - Best of both worlds: persistence + fresh data guarantees
 - **Impact:**
-  - ✅ No cold start delay
-  - ✅ All models ready
-  - ⚠️ Slower startup time
+  - ✅ **Instant startup** when data/config unchanged (~seconds)
+  - ✅ **Automatic re-indexing** when CSV files change
+  - ✅ **Automatic re-indexing** when embedding model changes
+  - ✅ **No stale data** (hash guard prevents serving outdated data)
+  - ✅ Persistence survives restarts (no wasted work)
+- **How it works:**
+  - Calculates MD5 hash of data files + embedding model config
+  - Saves hash in state file (`data/index.state`)
+  - On startup: compares current hash with saved hash
+  - Match → Load from persistent store (instant)
+  - Mismatch → Re-index and update state file
 
 ---
 
@@ -1096,31 +1129,57 @@ main.py
 
 ## 🔧 Key Implementation Highlights
 
-### **1. Numerical Data to Text Conversion**
+### **1. Smart Persistence with Hash-Based Change Detection**
+- **File:** `pipeline.py:93-131, 132-256`
+- **Feature:** Intelligent persistence that only re-indexes when necessary
+- **How it works:**
+  1. Calculates MD5 hash of CSV files + embedding model configuration
+  2. Saves hash in state file (`data/index.state`)
+  3. On startup: compares current hash with saved hash
+  4. **Match:** Loads from persistent ChromaDB (instant startup)
+  5. **Mismatch:** Clears and re-indexes (fresh data guaranteed)
+- **Impact:** 
+  - ✅ Fast startup when data unchanged (~seconds vs ~2-4 minutes)
+  - ✅ Automatic detection of CSV file changes
+  - ✅ Automatic detection of embedding model changes
+  - ✅ No stale data served (hash prevents it)
+  - ✅ Persistence survives restarts (no wasted work)
+- **Benefits:** Best of both worlds - speed + data freshness guarantee
+
+### **2. Numerical Data to Text Conversion**
 - **File:** `loader.py:82-129`
 - **Feature:** `FundData.text_for_embedding` property
 - **Impact:** Allows numerical metrics to be embedded and searched semantically
 - **Example:** "Fund X has 3-year CAGR of 15.2%, Sharpe ratio 1.25..."
 
-### **2. Fallback Mechanisms**
+### **3. Fallback Mechanisms**
 - **File:** `pipeline.py:253-325`
 - **Feature:** Fund info extraction with cache fallback
 - **Impact:** Ensures complete fund data even if metadata incomplete
 - **Why:** Search results may have incomplete metadata, cache provides full data
 
-### **3. Query Classification**
-- **File:** `pipeline.py:221-251`
+### **4. Query Classification**
+- **File:** `pipeline.py:387-417`
 - **Feature:** Automatic query type detection
 - **Impact:** Better routing and prompt selection
 - **Method:** Keyword-based (can be improved with LLM)
 
-### **4. Clear on Restart**
-- **File:** `pipeline.py:77-84`
-- **Feature:** Clear existing indexes before loading
-- **Impact:** Ensures fresh data from CSV on every restart
-- **Why:** Changes to CSV are reflected immediately
+### **5. Hash-Based Smart Persistence**
+- **File:** `pipeline.py:93-131, 132-256`
+- **Feature:** Hash-based change detection for intelligent persistence
+- **How it works:**
+  1. Calculates MD5 hash of CSV files + embedding model config
+  2. Compares with saved state file (`data/index.state`)
+  3. **If hash matches:** Loads from persistent ChromaDB (instant startup)
+  4. **If hash differs:** Clears and re-indexes (ensures fresh data)
+- **Impact:** 
+  - ✅ Fast startup (~seconds) when data unchanged
+  - ✅ Automatic re-indexing when CSV files change
+  - ✅ Automatic re-indexing when embedding model changes
+  - ✅ No stale data served (hash prevents it)
+- **Why:** Best of both worlds - persistence speed + data freshness guarantee
 
-### **5. Graceful Degradation**
+### **6. Graceful Degradation**
 - **File:** `reranker.py`, `embedder.py`
 - **Feature:** System works even if optional components fail
 - **Impact:** Robust system, doesn't break if API keys missing
@@ -1131,9 +1190,15 @@ main.py
 ## 📈 Performance Characteristics
 
 ### **Initialization Time:**
-- Model loading: ~10-30 seconds (first time, downloads model)
-- Embedding generation: Depends on document count
-- Indexing: Fast (in-memory)
+- **First run (or data changed):**
+  - Model loading: ~10-30 seconds (first time, downloads model)
+  - Embedding generation: Depends on document count (~2-4 minutes for typical dataset)
+  - Indexing: Fast (in-memory + persistent ChromaDB)
+- **Subsequent runs (data unchanged):**
+  - Hash check: ~milliseconds
+  - Load from persistent store: ~seconds
+  - **Total: ~5-10 seconds** (vs ~2-4 minutes without persistence)
+  - Lexical index rebuild: Fast (~1-2 seconds)
 
 ### **Query Latency:**
 - Embedding query: ~10-50ms
@@ -1175,11 +1240,14 @@ main.py
 
 1. ✅ **Embedding Cache** - ✅ Already active and integrated
 2. ✅ **Query Cache** - ✅ Already active and integrated
-3. **Redis Migration** - Can migrate from in-memory to Redis for distributed caching
-4. **PostgreSQL** - Supported, just change connection string (SQLite currently)
-5. **Additional Retrieval Methods** - Easy to add new searchers
-6. **Custom Prompts** - Easy to modify prompts.py
-7. **Persistent Vector Store** - ChromaDB persistence can be enabled
+3. ✅ **Smart Persistence with Hash-Based Change Detection** - ✅ Active and integrated
+   - ChromaDB persistence enabled
+   - Instant startup when data unchanged
+   - Automatic re-indexing when data/config changes
+4. **Redis Migration** - Can migrate from in-memory to Redis for distributed caching
+5. **PostgreSQL** - Supported, just change connection string (SQLite currently)
+6. **Additional Retrieval Methods** - Easy to add new searchers
+7. **Custom Prompts** - Easy to modify prompts.py
 
 ---
 

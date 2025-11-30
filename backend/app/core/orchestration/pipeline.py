@@ -8,9 +8,13 @@ Features:
 - Embedding caching for efficiency
 - Parallel hybrid retrieval
 - Optional reranking with Cohere
+- Smart Persistence with Hash-based change detection
 """
 
+import hashlib
+import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from app.api.schemas import (
@@ -56,11 +60,19 @@ class RAGPipeline:
         self._initialized = False
         
         # Components (lazy loaded) - enable caching and parallel
+        # Enable ChromaDB persistence with configured directory
         self.embedder = get_embedder(use_cache=True)
         self.lexical_searcher = get_lexical_searcher()
-        self.semantic_searcher = get_semantic_searcher()
+        self.semantic_searcher = get_semantic_searcher(
+            collection_name=settings.chroma_collection_name,
+            persist_dir=settings.chroma_persist_dir,
+        )
         self.hybrid_searcher = get_hybrid_searcher(use_parallel=True)
         self.generator = get_generator()
+        
+        # State file path for hash-based change detection
+        # Store in parent directory to keep raw data directory clean
+        self._state_file = Path(self.data_dir).parent / "index.state"
         
         # Query cache
         self._query_cache = None
@@ -79,31 +91,64 @@ class RAGPipeline:
             logger.warning(f"Reranker not available: {e}")
             self.reranker = None
 
-    def initialize(self, clear_existing: bool = True) -> None:
+    def _get_current_state_hash(self) -> str:
+        """
+        Generate a hash of current data files and configuration.
+        
+        This hash represents the "fingerprint" of the current data state.
+        If the hash changes, we know the data or config has changed and
+        we need to re-index.
+        
+        Returns:
+            Hexadecimal hash string representing current data state
+        """
+        hasher = hashlib.md5()
+        
+        # 1. Hash the data files
+        files = [
+            Path(settings.faqs_path),
+            Path(settings.funds_path),
+        ]
+        
+        for file_path in files:
+            if file_path.exists():
+                try:
+                    with open(file_path, "rb") as f:
+                        for chunk in iter(lambda: f.read(4096), b""):
+                            hasher.update(chunk)
+                except Exception as e:
+                    logger.warning(f"Failed to hash file {file_path}: {e}")
+            else:
+                logger.warning(f"Data file not found: {file_path}")
+                # Include in hash even if missing to detect file addition/removal
+                hasher.update(str(file_path).encode())
+        
+        # 2. Hash critical config (if model changes, we must re-index)
+        # Include embedding model name and dimension
+        hasher.update(settings.embedding_model.encode())
+        hasher.update(str(settings.embedding_dimension).encode())
+        
+        return hasher.hexdigest()
+
+    def initialize(self, clear_existing: bool = False) -> None:
         """
         Initialize the pipeline by loading and indexing data.
         
+        Uses hash-based change detection for smart persistence:
+        - Always loads documents and builds lexical index (fast, in-memory)
+        - Only checks hash for semantic indexing (slow, persistent)
+        - If data/config unchanged: Uses persistent vector store (fast startup)
+        - If data/config changed: Clears and re-indexes (ensures fresh data)
+        
         Args:
-            clear_existing: If True, clears existing indexes before loading new data.
-                          This ensures CSV changes are reflected on restart.
+            clear_existing: If True, forces a rebuild of the semantic index regardless of state.
         """
         if self._initialized:
             return
-
+            
         logger.info("Initializing RAG pipeline...")
         
-        # Clear existing indexes to ensure fresh data from CSV
-        if clear_existing:
-            logger.info("Clearing existing indexes to load fresh data from CSV...")
-            try:
-                self.lexical_searcher.clear()
-                self.semantic_searcher.clear()
-                logger.info("✓ Cleared existing indexes")
-            except Exception as e:
-                logger.warning(f"⚠ Failed to clear some indexes: {e}")
-                # Continue anyway - may not have existed
-        
-        # Load data using config settings (fresh from CSV files)
+        # 1. Always Load Data (Fast) - Needed for Lexical Search (BM25) which isn't persistent
         loader = DataLoader(
             data_dir=self.data_dir,
             faqs_file=settings.faqs_file,
@@ -115,21 +160,95 @@ class RAGPipeline:
             logger.warning("No documents loaded!")
             self._initialized = True
             return
-
+            
         logger.info(f"Loaded {len(documents)} documents from CSV files")
         
-        # Generate embeddings (with caching)
-        texts = [doc["text"] for doc in documents]
-        embeddings = self.embedder.embed_texts(texts)
-        
-        # Index for lexical search
+        # 2. Always Build Lexical Index (Fast, In-Memory)
+        # BM25 doesn't persist, so we rebuild it every time (it's fast)
         self.lexical_searcher.index_documents(documents)
+        logger.info("✓ Lexical search index built")
         
-        # Index for semantic search
-        self.semantic_searcher.index_documents(documents, embeddings)
+        # 3. Smart Semantic Indexing (Slow, Persistent)
+        # Check if we can skip the expensive embedding/indexing step
+        current_hash = self._get_current_state_hash()
+        should_reindex = clear_existing
+        
+        if not clear_existing and self._state_file.exists():
+            try:
+                saved_state = json.loads(self._state_file.read_text())
+                saved_hash = saved_state.get("hash")
+                
+                if saved_hash == current_hash:
+                    # Hash matches - check if the collection actually has data
+                    try:
+                        self.semantic_searcher._initialize()
+                        doc_count = self.semantic_searcher.document_count
+                        
+                        if doc_count > 0:
+                            logger.info("✅ Data/Config unchanged. Using persistent vector store.")
+                            logger.info(f"✓ Loaded {doc_count} documents from persistent store (instant startup!)")
+                            self._initialized = True
+                            
+                            # Log cache stats
+                            if hasattr(self.embedder, 'cache_stats'):
+                                stats = self.embedder.cache_stats
+                                logger.info(f"Embedding cache: {stats.get('size', 0)} entries")
+                            
+                            logger.info(f"Pipeline initialized with {len(documents)} documents")
+                            return
+                        else:
+                            logger.warning("⚠ Persistence file matches but vector store is empty. Re-indexing.")
+                            should_reindex = True
+                    except Exception as e:
+                        logger.warning(f"⚠ Failed to check persistent store: {e}. Re-indexing.")
+                        should_reindex = True
+                else:
+                    logger.info("🔄 Change detected. Hash mismatch:")
+                    logger.info(f"  Saved:   {saved_hash[:16] if saved_hash else 'None'}...")
+                    logger.info(f"  Current: {current_hash[:16]}...")
+                    should_reindex = True
+            except Exception as e:
+                logger.warning(f"⚠ State file corrupted, forcing refresh: {e}")
+                should_reindex = True
+        else:
+            if not self._state_file.exists():
+                logger.info("🔄 No state file found. Starting full semantic ingestion...")
+            should_reindex = True
+        
+        # --- Re-index Semantic Search (Data Changed or Force Refresh) ---
+        if should_reindex:
+            logger.info("🔄 Change detected or index missing. Starting full semantic ingestion...")
+            
+            # Clear existing semantic index to ensure clean state
+            try:
+                self.semantic_searcher.clear()
+                logger.info("✓ Cleared existing semantic index")
+            except Exception as e:
+                logger.warning(f"⚠ Failed to clear existing semantic index (may not exist): {e}")
+            
+            # Generate embeddings (this is the slow part, but caching helps)
+            texts = [doc["text"] for doc in documents]
+            embeddings = self.embedder.embed_texts(texts)
+            
+            # Index into Vector Store (persistent)
+            self.semantic_searcher.index_documents(documents, embeddings)
+            logger.info("✓ Semantic search index built and persisted")
+            
+            # Save new state
+            try:
+                state_data = {
+                    "hash": current_hash,
+                    "document_count": len(documents),
+                    "embedding_model": settings.embedding_model,
+                }
+                self._state_file.parent.mkdir(parents=True, exist_ok=True)
+                self._state_file.write_text(json.dumps(state_data, indent=2))
+                logger.info(f"✓ Index state saved to {self._state_file}")
+            except Exception as e:
+                logger.warning(f"⚠ Failed to save index state: {e}")
         
         self._initialized = True
-        logger.info(f"Pipeline initialized with {len(documents)} documents")
+        logger.info(f"✅ Pipeline initialized with {len(documents)} documents")
         
         # Log cache stats
         if hasattr(self.embedder, 'cache_stats'):

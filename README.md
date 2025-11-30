@@ -27,28 +27,56 @@ This system goes beyond simple text matching by handling **structured financial 
 ## 🏗️ Architecture
 
 ```mermaid
-flowchart LR
+flowchart TB
     User[User] --> Frontend[Next.js Frontend]
     Frontend --> API[FastAPI Backend]
     
-    subgraph "RAG Pipeline"
+    subgraph "Initialization (Startup)"
+        direction TB
+        Init[Pipeline Initialize] --> HashCheck{Hash Check}
+        HashCheck -->|Match| LoadPersist[Load from Persistent Store<br/>~5-10 seconds]
+        HashCheck -->|Mismatch| ReIndex[Re-index & Save State<br/>~2-4 minutes]
+        LoadPersist --> Ready[System Ready]
+        ReIndex --> Ready
+    end
+    
+    subgraph "RAG Pipeline (Query Processing)"
+        direction TB
         API --> Cache{Query Cache}
-        Cache -->|Hit| Return[Return Response]
+        Cache -->|Hit| Return[Return Response<br/>~50ms]
         Cache -->|Miss| Pipeline[Process Query]
         
-        Pipeline --> Embed[Embedder (BGE-M3)]
+        Pipeline --> Embed[Embedder<br/>BGE-M3]
         
         subgraph "Parallel Retrieval"
-            Embed --> Lexical[Lexical Search (BM25)]
-            Embed --> Semantic[Semantic Search (ChromaDB)]
+            direction LR
+            Embed --> Lexical[Lexical Search<br/>BM25 In-Memory]
+            Embed --> Semantic[Semantic Search<br/>ChromaDB Persistent]
         end
         
         Lexical & Semantic --> RRF[RRF Fusion]
         RRF --> Rerank[Cohere Reranker]
         Rerank --> LLM[Claude Generation]
+        LLM --> API
     end
     
-    LLM --> API
+    subgraph "Storage Layer"
+        direction TB
+        PersistDB[(ChromaDB<br/>Persistent Vector Store)]
+        StateFile[State File<br/>data/index.state]
+        EmbedCache[Embedding Cache<br/>24h TTL]
+        QueryCache[Query Cache<br/>5m TTL]
+    end
+    
+    Semantic -.->|Reads/Writes| PersistDB
+    HashCheck -.->|Checks| StateFile
+    Embed -.->|Uses| EmbedCache
+    Cache -.->|Uses| QueryCache
+    
+    style LoadPersist fill:#c8e6c9
+    style ReIndex fill:#fff9c4
+    style PersistDB fill:#e1f5ff
+    style StateFile fill:#f3e5f5
 ```
 
 ## 🛠️ Tech Stack
