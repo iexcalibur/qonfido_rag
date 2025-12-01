@@ -68,7 +68,7 @@ qonfido-rag/
 │   │   ├── 📁 services/                  # Service Layer
 │   │   │   ├── 📄 __init__.py
 │   │   │   ├── 📄 vector_store.py        # Vector store wrapper
-│   │   │   └── 📄 cache.py               # In-memory caching service
+│   │   │   └── 📄 cache.py               # Redis/In-memory caching service
 │   │   │
 │   │   └── 📁 utils/                     # Utilities
 │   │       ├── 📄 __init__.py
@@ -195,12 +195,13 @@ qonfido-rag/
   - `pipeline.py`: Main RAGPipeline class, end-to-end query processing
 
 #### `app/db/` - Database Layer
-- SQLModel ORM models and database session management
-- Data access layer (repositories)
+- SQLModel ORM models with async database session management
+- Async operations (PostgreSQL with asyncpg, SQLite with aiosqlite)
+- Data access layer (repositories) with async methods
 
 #### `app/services/` - External Services
 - `vector_store.py`: Vector store wrapper (ChromaDB)
-- `cache.py`: In-memory caching service (embedding cache, query cache)
+- `cache.py`: Redis/In-memory caching service (embedding cache, query cache with auto-fallback)
 
 #### `app/utils/` - Utilities
 - Logging configuration and helper functions
@@ -296,10 +297,10 @@ qonfido-rag/
 - **Embeddings**: BGE-M3 (sentence-transformers)
 - **Vector Store**: ChromaDB (in-process)
 - **Lexical Search**: BM25 (rank-bm25)
-- **LLM**: Claude API (Anthropic)
+- **LLM**: Claude API (Anthropic) - Sonnet default, Opus fallback
 - **Reranking**: Cohere API (optional)
-- **Database**: SQLite (SQLModel ORM)
-- **Cache**: In-memory (TTL-based)
+- **Database**: PostgreSQL (async) / SQLite (async, dev) - SQLModel ORM with async operations
+- **Cache**: Redis (production) / In-memory (dev) - Automatic fallback, TTL-based
 
 ### Frontend
 - **Framework**: Next.js 16 (App Router)

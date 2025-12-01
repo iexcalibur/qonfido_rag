@@ -4,7 +4,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from app.db.models import FAQ, Fund, QueryLog
 
@@ -14,42 +15,46 @@ logger = logging.getLogger(__name__)
 class FundRepository:
     """Repository for Fund database operations."""
 
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         self.session = session
 
-    def create(self, fund_data: dict[str, Any]) -> Fund:
+    async def create(self, fund_data: dict[str, Any]) -> Fund:
         """Create a new fund record."""
         fund = Fund(**fund_data)
         self.session.add(fund)
-        self.session.commit()
-        self.session.refresh(fund)
+        await self.session.commit()
+        await self.session.refresh(fund)
         return fund
 
-    def get_by_id(self, fund_id: int) -> Fund | None:
+    async def get_by_id(self, fund_id: int) -> Fund | None:
         """Get fund by internal ID."""
-        return self.session.get(Fund, fund_id)
+        return await self.session.get(Fund, fund_id)
 
-    def get_by_external_id(self, external_id: str) -> Fund | None:
+    async def get_by_external_id(self, external_id: str) -> Fund | None:
         """Get fund by external ID."""
         statement = select(Fund).where(Fund.external_id == external_id)
-        return self.session.exec(statement).first()
+        result = await self.session.execute(statement)
+        return result.scalar_one_or_none()
 
-    def get_all(self, limit: int = 100, offset: int = 0) -> list[Fund]:
+    async def get_all(self, limit: int = 100, offset: int = 0) -> list[Fund]:
         """Get all funds with pagination."""
         statement = select(Fund).offset(offset).limit(limit)
-        return list(self.session.exec(statement).all())
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
-    def get_by_category(self, category: str) -> list[Fund]:
+    async def get_by_category(self, category: str) -> list[Fund]:
         """Get funds by category."""
         statement = select(Fund).where(Fund.category == category)
-        return list(self.session.exec(statement).all())
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
-    def get_by_risk_level(self, risk_level: str) -> list[Fund]:
+    async def get_by_risk_level(self, risk_level: str) -> list[Fund]:
         """Get funds by risk level."""
         statement = select(Fund).where(Fund.risk_level == risk_level)
-        return list(self.session.exec(statement).all())
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
-    def get_top_by_sharpe(self, limit: int = 10) -> list[Fund]:
+    async def get_top_by_sharpe(self, limit: int = 10) -> list[Fund]:
         """Get top funds by Sharpe ratio."""
         statement = (
             select(Fund)
@@ -57,9 +62,10 @@ class FundRepository:
             .order_by(Fund.sharpe_ratio.desc())
             .limit(limit)
         )
-        return list(self.session.exec(statement).all())
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
-    def get_top_by_cagr(self, years: int = 3, limit: int = 10) -> list[Fund]:
+    async def get_top_by_cagr(self, years: int = 3, limit: int = 10) -> list[Fund]:
         """Get top funds by CAGR for specified years."""
         if years == 1:
             column = Fund.cagr_1yr
@@ -74,78 +80,84 @@ class FundRepository:
             .order_by(column.desc())
             .limit(limit)
         )
-        return list(self.session.exec(statement).all())
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
-    def bulk_create(self, funds_data: list[dict[str, Any]]) -> list[Fund]:
+    async def bulk_create(self, funds_data: list[dict[str, Any]]) -> list[Fund]:
         """Bulk create fund records."""
         funds = [Fund(**data) for data in funds_data]
         self.session.add_all(funds)
-        self.session.commit()
+        await self.session.commit()
         for fund in funds:
-            self.session.refresh(fund)
+            await self.session.refresh(fund)
         return funds
 
-    def count(self) -> int:
+    async def count(self) -> int:
         """Get total fund count."""
         statement = select(Fund)
-        return len(list(self.session.exec(statement).all()))
+        result = await self.session.execute(statement)
+        return len(list(result.scalars().all()))
 
 
 class FAQRepository:
     """Repository for FAQ database operations."""
 
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         self.session = session
 
-    def create(self, faq_data: dict[str, Any]) -> FAQ:
+    async def create(self, faq_data: dict[str, Any]) -> FAQ:
         """Create a new FAQ record."""
         faq = FAQ(**faq_data)
         self.session.add(faq)
-        self.session.commit()
-        self.session.refresh(faq)
+        await self.session.commit()
+        await self.session.refresh(faq)
         return faq
 
-    def get_by_id(self, faq_id: int) -> FAQ | None:
+    async def get_by_id(self, faq_id: int) -> FAQ | None:
         """Get FAQ by internal ID."""
-        return self.session.get(FAQ, faq_id)
+        return await self.session.get(FAQ, faq_id)
 
-    def get_by_external_id(self, external_id: str) -> FAQ | None:
+    async def get_by_external_id(self, external_id: str) -> FAQ | None:
         """Get FAQ by external ID."""
         statement = select(FAQ).where(FAQ.external_id == external_id)
-        return self.session.exec(statement).first()
+        result = await self.session.execute(statement)
+        return result.scalar_one_or_none()
 
-    def get_all(self, limit: int = 100, offset: int = 0) -> list[FAQ]:
+    async def get_all(self, limit: int = 100, offset: int = 0) -> list[FAQ]:
         """Get all FAQs with pagination."""
         statement = select(FAQ).offset(offset).limit(limit)
-        return list(self.session.exec(statement).all())
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
-    def get_by_category(self, category: str) -> list[FAQ]:
+    async def get_by_category(self, category: str) -> list[FAQ]:
         """Get FAQs by category."""
         statement = select(FAQ).where(FAQ.category == category)
-        return list(self.session.exec(statement).all())
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
-    def bulk_create(self, faqs_data: list[dict[str, Any]]) -> list[FAQ]:
+    async def bulk_create(self, faqs_data: list[dict[str, Any]]) -> list[FAQ]:
         """Bulk create FAQ records."""
         faqs = [FAQ(**data) for data in faqs_data]
         self.session.add_all(faqs)
-        self.session.commit()
+        await self.session.commit()
         for faq in faqs:
-            self.session.refresh(faq)
+            await self.session.refresh(faq)
         return faqs
 
-    def count(self) -> int:
+    async def count(self) -> int:
         """Get total FAQ count."""
         statement = select(FAQ)
-        return len(list(self.session.exec(statement).all()))
+        result = await self.session.execute(statement)
+        return len(list(result.scalars().all()))
 
 
 class QueryLogRepository:
     """Repository for query log operations."""
 
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         self.session = session
 
-    def log_query(
+    async def log_query(
         self,
         query: str,
         search_mode: str,
@@ -168,22 +180,24 @@ class QueryLogRepository:
             session_id=session_id,
         )
         self.session.add(log)
-        self.session.commit()
-        self.session.refresh(log)
+        await self.session.commit()
+        await self.session.refresh(log)
         return log
 
-    def get_recent(self, limit: int = 100) -> list[QueryLog]:
+    async def get_recent(self, limit: int = 100) -> list[QueryLog]:
         """Get recent query logs."""
         statement = (
             select(QueryLog)
             .order_by(QueryLog.created_at.desc())
             .limit(limit)
         )
-        return list(self.session.exec(statement).all())
+        result = await self.session.execute(statement)
+        return list(result.scalars().all())
 
-    def get_stats(self) -> dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get query statistics."""
-        logs = list(self.session.exec(select(QueryLog)).all())
+        result = await self.session.execute(select(QueryLog))
+        logs = list(result.scalars().all())
         
         if not logs:
             return {

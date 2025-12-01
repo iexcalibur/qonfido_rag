@@ -2,6 +2,7 @@
 """Seed the database with fund and FAQ data from CSV files."""
 
 import argparse
+import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -22,7 +23,7 @@ from app.utils import setup_logging
 logger = logging.getLogger(__name__)
 
 
-def seed_database(
+async def seed_database(
     data_dir: str = "data/raw",
     clear_existing: bool = False,
 ) -> dict:
@@ -34,9 +35,9 @@ def seed_database(
     
     if clear_existing:
         logger.warning("Dropping existing tables...")
-        db.drop_tables()
+        await db.drop_tables()
     
-    db.create_tables()
+    await db.create_tables()
     logger.info("Database tables ready")
 
     logger.info(f"Loading data from {data_dir}...")
@@ -50,12 +51,12 @@ def seed_database(
 
     if faqs:
         logger.info(f"Seeding {len(faqs)} FAQs...")
-        with db.session_scope() as session:
+        async with db.session_scope() as session:
             repo = FAQRepository(session)
             
             for faq in faqs:
                 try:
-                    repo.create({
+                    await repo.create({
                         "external_id": faq.id,
                         "question": faq.question,
                         "answer": faq.answer,
@@ -69,12 +70,12 @@ def seed_database(
 
     if funds:
         logger.info(f"Seeding {len(funds)} funds...")
-        with db.session_scope() as session:
+        async with db.session_scope() as session:
             repo = FundRepository(session)
             
             for fund in funds:
                 try:
-                    repo.create({
+                    await repo.create({
                         "external_id": fund.id,
                         "fund_name": fund.fund_name,
                         "fund_house": fund.fund_house,
@@ -109,8 +110,8 @@ def seed_database(
     return stats
 
 
-def main():
-    """Main entry point."""
+async def main_async():
+    """Main async entry point."""
     parser = argparse.ArgumentParser(
         description="Seed the database with CSV data",
     )
@@ -135,13 +136,18 @@ def main():
     setup_logging("DEBUG" if args.verbose else "INFO")
 
     try:
-        seed_database(
+        await seed_database(
             data_dir=args.data_dir,
             clear_existing=args.clear,
         )
     except Exception as e:
         logger.error(f"Seeding failed: {e}")
         sys.exit(1)
+
+
+def main():
+    """Main entry point - runs async function."""
+    asyncio.run(main_async())
 
 
 if __name__ == "__main__":

@@ -52,9 +52,14 @@ Comprehensive technical architecture documentation covering all subsystems, desi
 │                         DATA LAYER                                        │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌─────────────┐ │
 │  │  CSV Files   │  │  Vector Store│  │  BM25 Index  │  │  Cache      │ │
-│  │  (FAQs,      │  │  (ChromaDB)  │  │  (In-Memory) │  │  (In-Memory)│ │
-│  │   Funds)     │  │              │  │              │  │             │ │
+│  │  (FAQs,      │  │  (ChromaDB)  │  │  (In-Memory) │  │  (Redis/    │ │
+│  │   Funds)     │  │              │  │              │  │   In-Memory)│ │
 │  └──────────────┘  └──────────────┘  └──────────────┘  └─────────────┘ │
+│  ┌──────────────┐                                                       │
+│  │  Database    │                                                       │
+│  │  (PostgreSQL/│                                                       │
+│  │   SQLite)    │                                                       │
+│  └──────────────┘                                                       │
 └───────────────────────────────┬──────────────────────────────────────────┘
                                 │
 ┌───────────────────────────────▼──────────────────────────────────────────┐
@@ -64,8 +69,9 @@ Comprehensive technical architecture documentation covering all subsystems, desi
 │  │  (Anthropic)     │  │  (Reranking)     │  │  (HuggingFace)       │  │
 │  │                  │  │                  │  │                      │  │
 │  │  - Generation    │  │  - Reranking     │  │  - BGE-M3            │  │
-│  │  - Answer        │  │  - Relevance     │  │  - Sentence          │  │
-│  │    Synthesis     │  │  - Scoring       │  │    Transformers      │  │
+│  │  - Sonnet/Opus   │  │  - Relevance     │  │  - Sentence          │  │
+│  │  - Answer        │  │  - Scoring       │  │    Transformers      │  │
+│  │    Synthesis     │  │                  │  │                      │  │
 │  └──────────────────┘  └──────────────────┘  └──────────────────────┘  │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
@@ -327,9 +333,11 @@ Comprehensive technical architecture documentation covering all subsystems, desi
 - **Purpose:** Instant responses for repeated queries
 
 **Implementation:**
-- In-memory dictionary with TTL entries
+- Redis cache (production) with automatic fallback to in-memory cache (development)
+- Thread-safe in-memory cache with RLock and LRU eviction
 - Automatic expiration cleanup
-- Thread-safe (for production, consider Redis)
+- Case-insensitive query normalization for cache keys
+- Reads REDIS_URL from environment variables
 
 **Cache Stats:**
 - Track cache hits/misses
@@ -402,11 +410,12 @@ Comprehensive technical architecture documentation covering all subsystems, desi
 - **No training:** No model needed
 - **Trade-off:** Less sophisticated than learned fusion
 
-#### Why In-Memory Cache over Redis?
-- **Development:** Simpler setup (no external service)
-- **Sufficient:** Works for development/MVP
-- **Migration:** Easy to swap to Redis later
-- **Trade-off:** Not distributed, lost on restart
+#### Why Redis with Automatic Fallback?
+- **Production:** Redis provides persistent, distributed caching
+- **Development:** Automatic fallback to in-memory cache (no setup needed)
+- **Reliability:** System works even if Redis is unavailable
+- **Best of both worlds:** Production scalability with development simplicity
+- **Trade-off:** Requires Redis setup for production (but optional for dev)
 
 ---
 

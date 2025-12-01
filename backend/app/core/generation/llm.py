@@ -17,11 +17,13 @@ class LLMGenerator:
     def __init__(
         self,
         api_key: str | None = None,
-        model: str = "claude-3-opus-20240229",
+        model: str = "claude-3-sonnet-20240229",
+        fallback_model: str | None = None,
         max_tokens: int = 1024,
         temperature: float = 0.3,
     ):
         self.model = model
+        self.fallback_model = fallback_model or getattr(settings, 'claude_fallback_model', 'claude-3-opus-20240229')
         self.max_tokens = max_tokens
         self.temperature = temperature
         
@@ -89,8 +91,27 @@ class LLMGenerator:
             return response.content[0].text
             
         except Exception as e:
-            logger.error(f"Generation failed: {e}")
-            raise
+            if self.model != self.fallback_model:
+                logger.warning(f"Generation failed with {self.model}: {e}")
+                logger.info(f"Falling back to {self.fallback_model}")
+                try:
+                    response = self.client.messages.create(
+                        model=self.fallback_model,
+                        max_tokens=self.max_tokens,
+                        temperature=self.temperature,
+                        system=system_prompt,
+                        messages=[
+                            {"role": "user", "content": user_message}
+                        ],
+                    )
+                    logger.info(f"Fallback model {self.fallback_model} succeeded")
+                    return response.content[0].text
+                except Exception as fallback_error:
+                    logger.error(f"Fallback model {self.fallback_model} also failed: {fallback_error}")
+                    raise fallback_error
+            else:
+                logger.error(f"Generation failed with {self.model}: {e}")
+                raise
 
     def _get_default_system_prompt(self) -> str:
         """Return default system prompt for financial assistant."""
@@ -140,6 +161,7 @@ def get_generator(**kwargs) -> LLMGenerator:
     global _generator
     if _generator is None:
         kwargs.setdefault("model", settings.claude_model)
+        kwargs.setdefault("fallback_model", getattr(settings, 'claude_fallback_model', 'claude-3-opus-20240229'))
         kwargs.setdefault("max_tokens", settings.claude_max_tokens)
         kwargs.setdefault("temperature", settings.claude_temperature)
         _generator = LLMGenerator(**kwargs)

@@ -195,32 +195,38 @@ class RAGPipeline:
 
     async def process(
         self,
-        query: str,
+        query: str,  
         search_mode: SearchMode = SearchMode.HYBRID,
         top_k: int = 5,
         rerank: bool = True,
         source_filter: str | None = None,
     ) -> QueryResponse:
         """Process query through RAG pipeline: retrieve, rerank, generate."""
+       
+        normalized_query = " ".join(query.strip().lower().split())
+        
+        
         if self._query_cache and self.use_query_cache:
             cached = self._query_cache.get(
-                query=query,
+                query=normalized_query,
                 search_mode=search_mode.value,
                 top_k=top_k,
                 source_filter=source_filter,
             )
             if cached:
-                logger.info("Query cache hit!")
+                logger.info(f"Query cache HIT! Query: '{normalized_query[:50]}...' | Cache size: {self._query_cache._cache.size}")
                 return QueryResponse(**cached)
+            else:
+                logger.info(f"Query cache MISS. Query: '{normalized_query[:50]}...' | Cache size: {self._query_cache._cache.size}")
         
         if not self._initialized:
             self.initialize()
 
-        query_embedding = self.embedder.embed_query(query)
+        query_embedding = self.embedder.embed_query(normalized_query)
         
         if search_mode == SearchMode.LEXICAL:
             results = self.lexical_searcher.search(
-                query=query,
+                query=normalized_query,
                 top_k=top_k,
                 source_filter=source_filter,
             )
@@ -232,7 +238,7 @@ class RAGPipeline:
             )
         else:
             results = self.hybrid_searcher.search(
-                query=query,
+                query=normalized_query,
                 query_embedding=query_embedding,
                 top_k=top_k,
                 source_filter=source_filter,
@@ -241,7 +247,7 @@ class RAGPipeline:
         if rerank and self.reranker and results:
             try:
                 results = self.reranker.rerank(
-                    query=query,
+                    query=normalized_query,
                     results=results,
                     top_k=min(top_k, len(results)),
                 )
@@ -262,7 +268,7 @@ class RAGPipeline:
             context=context,
         )
 
-        query_type = self._classify_query(query, results)
+        query_type = self._classify_query(normalized_query, results)
         funds = self._extract_fund_info(results)
 
         sources = [
@@ -289,12 +295,13 @@ class RAGPipeline:
         
         if self._query_cache and self.use_query_cache:
             self._query_cache.set(
-                query=query,
+                query=normalized_query,
                 search_mode=search_mode.value,
                 top_k=top_k,
                 result=response.model_dump(),
                 source_filter=source_filter,
             )
+            logger.info(f"Query cached. Query: '{normalized_query[:50]}...' | Cache size: {self._query_cache._cache.size}")
 
         return response
 

@@ -38,8 +38,12 @@ class Settings(BaseSettings):
     embedding_batch_size: int = Field(32, description="Batch size for embedding")
 
     claude_model: str = Field(
-        "claude-3-opus-20240229",
+        "claude-3-sonnet-20240229",
         description="Claude model to use. Valid models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307",
+    )
+    claude_fallback_model: str = Field(
+        "claude-3-opus-20240229",
+        description="Fallback Claude model if primary model fails. Default: Opus for highest quality fallback.",
     )
     claude_max_tokens: int = Field(1024, description="Max tokens for Claude response")
     claude_temperature: float = Field(0.3, description="Temperature for Claude")
@@ -63,6 +67,15 @@ class Settings(BaseSettings):
     data_dir: str = Field("data/raw", description="Data directory containing CSV files")
     faqs_file: str = Field("faqs.csv", description="FAQs CSV filename")
     funds_file: str = Field("funds.csv", description="Fund performance CSV filename")
+
+    database_url: str | None = Field(
+        None,
+        description="Database URL. Defaults to SQLite if not provided. Example: postgresql+asyncpg://user:pass@host:5432/dbname",
+    )
+    redis_url: str | None = Field(
+        None,
+        description="Redis URL for caching. If not provided, uses in-memory cache. Example: redis://localhost:6379/0",
+    )
 
     @property
     def faqs_path(self) -> str:

@@ -64,8 +64,11 @@ flowchart LR
 ### Key Components
 
 - **Hybrid Search**: Combines lexical (BM25) and semantic (vector) search for optimal results
-- **Multi-Level Caching**: Embedding cache (24h) + Query cache (5min) for fast responses
+- **Multi-Level Caching**: Embedding cache (24h) + Query cache (5min) with Redis support
 - **Smart Persistence**: Hash-based change detection for fast startup (~5-10s)
+- **Query Normalization**: Case-insensitive caching ensures "SIP" and "sip" hit same cache
+- **Async Database**: PostgreSQL (production) / SQLite (development) with async operations
+- **Cost Optimization**: Claude Sonnet default with Opus fallback for reliability
 
 📖 **For detailed architecture, design decisions, and scalability, see [Architecture & Design Decisions](docs/ARCHITECTURE_AND_DESIGN_DECISIONS.md)**
 
@@ -81,11 +84,12 @@ flowchart LR
 | **Backend** | API | **FastAPI** + Pydantic | High performance, async support, auto-docs |
 | | Embeddings | **BGE-M3** (1024-dim) | Top quality, free, multilingual support |
 | | Vector Store | **ChromaDB** (In-Process) | Simple setup, built-in persistence, Python-native |
-| | LLM | **Anthropic Claude 3** | Top-tier quality, excellent context handling |
+| | LLM | **Claude Sonnet** (Opus fallback) | Cost-effective default with high-quality fallback |
 | | Lexical Search | **BM25** | Fast, proven algorithm, no training needed |
 | | Reranking | **Cohere** (Optional) | Better ranking, graceful fallback if unavailable |
 | **Data** | Storage | CSV + ChromaDB | Simple, sufficient for MVP |
-| | Cache | In-Memory (TTL-based) | Fast, simple, upgradeable to Redis later |
+| | Database | **PostgreSQL** (async) / SQLite (dev) | Async operations, production-ready |
+| | Cache | **Redis** (auto-fallback to In-Memory) | Persistent cache, automatic fallback for dev |
 | | Persistence | Hash-based state | Fast startup, automatic change detection |
 
 **Design Philosophy**: Prioritize simplicity and developer experience for MVP, with clear migration paths for production scale.
@@ -266,6 +270,8 @@ Content-Type: application/json
 ### 2. Active Multi-Level Caching
 - **Embedding Cache**: 24hr TTL, avoids recomputing embeddings (Active & Integrated)
 - **Query Cache**: 5min TTL, instant responses for repeated queries (Active & Integrated)
+- **Redis Support**: Automatic Redis detection with fallback to in-memory cache
+- **Query Normalization**: Case-insensitive caching ("SIP" = "sip" = "Sip")
 
 ### 3. Intelligent Query Handling
 - Automatic query classification (FAQ vs numerical vs hybrid)
@@ -343,7 +349,18 @@ ANTHROPIC_API_KEY=sk-ant-...
 # Optional (Features degrade gracefully if missing)
 COHERE_API_KEY=...          # Enables Reranking step
 EMBEDDING_MODEL=BAAI/bge-m3 # Can swap to 'all-MiniLM-L6-v2' for speed
-CLAUDE_MODEL=claude-3-opus-20240229
+
+# LLM Configuration
+CLAUDE_MODEL=claude-3-sonnet-20240229  # Default: Sonnet (cost-effective)
+CLAUDE_FALLBACK_MODEL=claude-3-opus-20240229  # Fallback: Opus (high quality)
+
+# Database (Optional - defaults to SQLite for dev)
+DATABASE_URL=postgresql+asyncpg://user:pass@host:5432/dbname  # PostgreSQL (production)
+# Or leave unset for SQLite (development)
+
+# Cache (Optional - defaults to in-memory for dev)
+REDIS_URL=redis://localhost:6379/0  # Redis (production)
+# Or leave unset for in-memory cache (development)
 ```
 
 ---

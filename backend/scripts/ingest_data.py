@@ -2,6 +2,7 @@
 """Load CSV data, generate embeddings, and index into vector store."""
 
 import argparse
+import asyncio
 import logging
 import sys
 import time
@@ -44,7 +45,7 @@ def ingest_data(
 
     if not skip_db:
         try:
-            init_db()
+            asyncio.run(init_db())
             logger.info("Database initialized")
         except Exception as e:
             logger.warning(f"Database init skipped: {e}")

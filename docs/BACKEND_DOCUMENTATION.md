@@ -157,7 +157,9 @@ backend/
 - **Key Settings:**
   - API keys (Anthropic, Cohere)
   - Embedding model configuration
-  - LLM settings (Claude model, temperature, max tokens)
+  - LLM settings (Claude model with Sonnet default, Opus fallback, temperature, max tokens)
+  - Database settings (DATABASE_URL for PostgreSQL/SQLite)
+  - Cache settings (REDIS_URL for Redis with in-memory fallback)
   - Retrieval settings (top_k, rerank, hybrid alpha)
   - Vector store settings (ChromaDB)
   - Data paths (CSV file locations)
@@ -696,16 +698,21 @@ backend/
   - No stale data (hash guard prevents it)
 
 **`process()` - THE MAIN METHOD:**
-- Receives user query
-- Embeds query
+- Receives user query (original, preserves user intent/tone)
+- **Query Normalization**: Normalizes query once at the start (case-insensitive, whitespace-normalized)
+  - Used for: cache lookup, embedding, search, reranking (technical operations)
+  - Original query preserved for: LLM generation (maintains user tone/intent)
+- Checks query cache using normalized key
+- Embeds normalized query (ensures "SIP" and "sip" hit same embedding cache)
 - Selects retrieval mode (lexical/semantic/hybrid)
-- Retrieves relevant documents
-- Optionally reranks results
+- Retrieves relevant documents using normalized query
+- Optionally reranks results using normalized query
 - Formats context
-- Generates LLM response
+- Generates LLM response using original query (preserves user intent)
 - Classifies query type
 - Extracts fund information
 - Calculates confidence
+- Saves to query cache using normalized key
 - Returns structured response
 
 **Helper Methods:**
@@ -763,25 +770,26 @@ backend/
 
 #### `backend/app/db/session.py`
 - **Path:** `backend/app/db/session.py`
-- **Purpose:** Database connection and session management
+- **Purpose:** Async database connection and session management
 - **What it contains:**
-  - `DatabaseManager` class
-  - Session management utilities
-  - Connection pooling
+  - `DatabaseManager` class with async operations
+  - AsyncSession management utilities
+  - Async connection pooling
 - **Why it exists:**
-  - Handles database connections
-  - Supports SQLite (default) and PostgreSQL
-  - Session lifecycle management
+  - Handles async database connections (non-blocking)
+  - Supports SQLite (aiosqlite) and PostgreSQL (asyncpg)
+  - Async session lifecycle management
 - **Key Features:**
-  - Default: SQLite (no server needed)
-  - Supports PostgreSQL (production)
-  - Connection pooling
-  - Context managers for sessions
+  - Default: SQLite with aiosqlite (async, no server needed)
+  - Supports PostgreSQL with asyncpg (async, production-ready)
+  - Automatic URL normalization (postgresql:// → postgresql+asyncpg://)
+  - Async context managers for sessions
+  - Reads DATABASE_URL from environment variables
 - **Impact:**
   - **Low-Medium** - Database is optional
   - Needed if using database features
-  - Supports future database usage
-- **Lines:** ~126
+  - Fully async for better FastAPI performance
+  - **Lines:** ~132
 
 ---
 
@@ -808,24 +816,29 @@ backend/
 
 #### `backend/app/services/cache.py`
 - **Path:** `backend/app/services/cache.py`
-- **Purpose:** Caching service for embeddings and query results
+- **Purpose:** Caching service for embeddings and query results with Redis support
 - **What it contains:**
-  - `InMemoryCache` - In-memory cache with TTL
+  - `InMemoryCache` - Thread-safe in-memory cache with LRU eviction and TTL
+  - `RedisCache` - Redis-based cache with automatic fallback
   - `EmbeddingCache` - Specialized embedding cache
-  - `QueryCache` - Query result cache
+  - `QueryCache` - Query result cache with case-insensitive normalization
 - **Why it exists:**
   - Avoids recomputing embeddings
   - Caches query results for faster responses
   - Reduces API calls and computation
+  - Supports both in-memory (dev) and Redis (production)
 - **Key Features:**
   - TTL-based expiration
-  - Hash-based cache keys
-  - Batch operations
-  - Currently in-memory (Redis placeholder comment)
+  - Case-insensitive query normalization for cache keys
+  - Thread-safe operations (RLock for concurrent requests)
+  - LRU eviction to prevent memory issues
+  - Automatic Redis detection with fallback to in-memory
+  - Reads REDIS_URL from environment variables
 - **Impact:**
   - **High** - Fully integrated and actively used
   - Provides 50-80% performance improvement for cached queries
-  - Ready for Redis migration (currently in-memory)
+  - Redis support for production scalability
+  - Automatic fallback ensures reliability
 - **Key Classes:**
 
 **`InMemoryCache`:**
@@ -1064,20 +1077,25 @@ backend/
   - ✅ No additional infrastructure
   - ⚠️ May need migration for large scale
 
-### **2. SQLite instead of PostgreSQL**
-- **Decision:** SQLite default, PostgreSQL optional
-- **Why:** Simpler for development
+### **2. Async Database: SQLite (dev) / PostgreSQL (production)**
+- **Decision:** SQLite with aiosqlite default, PostgreSQL with asyncpg optional
+- **Why:** Async operations for better FastAPI performance, simple dev setup
 - **Impact:**
-  - ✅ Zero setup for development
-  - ✅ Code supports PostgreSQL (ready for production)
+  - ✅ Zero setup for development (SQLite)
+  - ✅ Fully async for non-blocking I/O
+  - ✅ Production-ready PostgreSQL support
+  - ✅ Automatic URL normalization
+  - ✅ Reads DATABASE_URL from environment
 
-### **3. In-Memory Cache instead of Redis**
-- **Decision:** In-memory cache default
-- **Why:** Simpler, no additional service
+### **3. Redis Cache with Automatic Fallback**
+- **Decision:** Redis with automatic fallback to in-memory cache
+- **Why:** Production scalability with development simplicity
 - **Impact:**
-  - ✅ Works out of the box
-  - ⚠️ Cache lost on restart
-  - ✅ Ready for Redis migration
+  - ✅ Works out of the box (in-memory for dev)
+  - ✅ Redis support for production (persistent, distributed)
+  - ✅ Automatic fallback ensures reliability
+  - ✅ Thread-safe in-memory cache with LRU eviction
+  - ✅ Reads REDIS_URL from environment
 
 ### **4. Hybrid Search as Default**
 - **Decision:** Hybrid mode is default

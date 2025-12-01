@@ -46,7 +46,7 @@ This document provides a comprehensive overview of the Qonfido RAG system's arch
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
 │  │ Lexical      │  │ Semantic     │  │ Hybrid       │             │
 │  │ (BM25)       │  │ (Vector)     │  │ (RRF Fusion) │             │
-│  │ In-Memory    │  │ ChromaDB     │  │ Parallel     │             │
+│  │ In-Memory/Redis│  │ ChromaDB     │  │ Parallel     │             │
 │  └──────────────┘  └──────────────┘  └──────────────┘             │
 │                                                                      │
 │  Optional: Cohere Reranker (Cross-Encoder)                          │
@@ -54,7 +54,7 @@ This document provides a comprehensive overview of the Qonfido RAG system's arch
                              │
 ┌────────────────────────────▼────────────────────────────────────────┐
 │                      GENERATION LAYER                                │
-│  Anthropic Claude API (claude-3-opus-20240229)                      │
+│  Anthropic Claude API (Sonnet default, Opus fallback)              │
 │  ├─ Prompt Engineering                                              │
 │  ├─ Context Formatting                                              │
 │  └─ Response Generation                                             │
@@ -62,10 +62,10 @@ This document provides a comprehensive overview of the Qonfido RAG system's arch
                              │
 ┌────────────────────────────▼────────────────────────────────────────┐
 │                        DATA LAYER                                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
-│  │ CSV Files    │  │ Vector Store │  │ In-Memory    │             │
-│  │ (FAQs/Funds) │  │ (ChromaDB)   │  │ Cache        │             │
-│  └──────────────┘  └──────────────┘  └──────────────┘             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  │ CSV Files    │  │ Vector Store │  │ Redis/In-Mem │  │ PostgreSQL/ │
+│  │ (FAQs/Funds) │  │ (ChromaDB)   │  │ Cache        │  │ SQLite      │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -196,8 +196,10 @@ This document provides a comprehensive overview of the Qonfido RAG system's arch
 |--------|--------|----------|----------|
 | ChromaDB (in-process) | ✅ Easy setup | ❌ Single instance | **Chosen**: MVP focus |
 | Qdrant (server) | ❌ More complex | ✅ Distributed | Future option |
-| In-memory cache | ✅ No dependencies | ❌ Not distributed | **Chosen**: Development |
-| Redis cache | ❌ External service | ✅ Distributed | Production upgrade |
+| In-memory cache | ✅ No dependencies | ❌ Not distributed | **Chosen**: Development fallback |
+| Redis cache | ⚠️ External service | ✅ Distributed | **Chosen**: Production (auto-fallback) |
+| SQLite (async) | ✅ No dependencies | ❌ Single instance | **Chosen**: Development |
+| PostgreSQL (async) | ⚠️ External service | ✅ Distributed | **Chosen**: Production |
 
 **Justification**: Prioritize rapid development and MVP validation. Can scale horizontally later with minimal code changes.
 
@@ -249,7 +251,9 @@ This document provides a comprehensive overview of the Qonfido RAG system's arch
 | Error messages | Detailed | Sanitized | Middleware wrapper |
 | Logging | Console | Structured (JSON) | Logging service |
 | Secrets | .env file | Secret manager | Environment variables |
-| In-memory cache | Dict | Redis | Swap implementation |
+| In-memory cache | Dict | Redis | **Implemented**: Auto-detection with fallback |
+| Database | SQLite (async) | PostgreSQL (async) | **Implemented**: Environment-based selection |
+| LLM Model | Sonnet (default) | Opus (fallback) | **Implemented**: Cost-effective with quality fallback |
 
 **Justification**: Ship MVP fast, iterate based on feedback. Clear migration paths identified.
 
@@ -292,7 +296,8 @@ This document provides a comprehensive overview of the Qonfido RAG system's arch
 ```python
 # Current (single instance)
 ChromaDB (in-process) → ChromaDB Server or Qdrant
-In-memory cache → Redis cluster
+Redis/In-memory cache → Redis cluster (already supports Redis)
+SQLite/PostgreSQL → PostgreSQL cluster (already supports PostgreSQL)
 Single API instance → Multiple instances behind load balancer
 ```
 
@@ -597,8 +602,10 @@ Single API instance → Multiple instances behind load balancer
 
 ### Short Term (Next Sprint)
 
-1. **Redis Integration**: Replace in-memory cache with Redis
-2. **Structured Logging**: JSON logs for production monitoring
+1. ✅ **Redis Integration**: Already implemented with automatic fallback
+2. ✅ **PostgreSQL Support**: Already implemented with async operations
+3. ✅ **Query Normalization**: Already implemented for better cache hits
+4. **Structured Logging**: JSON logs for production monitoring
 3. **Rate Limiting**: Protect API from abuse
 4. **Metrics/Telemetry**: Prometheus metrics, OpenTelemetry tracing
 

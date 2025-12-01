@@ -52,8 +52,8 @@ flowchart TB
     subgraph Storage ["💾 STORAGE LAYER"]
         CHROMADB[("ChromaDB<br/>Vector Store")]
         BM25_INDEX["BM25 Index<br/>Lexical Search"]
-        CACHE["In-Memory Cache<br/>(Active & Integrated)"]
-        SQLITE[("SQLite<br/>(Optional/Inactive)")]
+        CACHE["Redis/In-Memory Cache<br/>(Active & Integrated)"]
+        DATABASE[("PostgreSQL/SQLite<br/>(Async, Optional)")]
     end
 
     subgraph External ["🌐 EXTERNAL SERVICES"]
@@ -102,7 +102,7 @@ flowchart TB
     class USER_QUERY,CSV_FILES inputStyle
     class HOME,CHAT,FUNDS frontendStyle
     class API,INGEST,RETRIEVE,GENERATE,VALIDATE backendStyle
-    class CHROMADB,BM25_INDEX,CACHE,SQLITE storageStyle
+    class CHROMADB,BM25_INDEX,CACHE,DATABASE storageStyle
     class CLAUDE,COHERE,HUGGINGFACE externalStyle
 ````
 
@@ -620,9 +620,9 @@ flowchart TD
         BM25_READ[Search Index<br/>BM25 Scoring]
     end
 
-    subgraph SQLite ["🗄️ SQLITE (Optional/Inactive)"]
-        DB_WRITE[Write Metadata<br/>Funds, FAQs]
-        DB_READ[Read Metadata]
+    subgraph Database ["🗄️ DATABASE (PostgreSQL/SQLite, Async, Optional)"]
+        DB_WRITE[Write Metadata<br/>Funds, FAQs<br/>Async Operations]
+        DB_READ[Read Metadata<br/>Async Operations]
     end
 
     QUERY_EMBED --> CHROMA_READ
