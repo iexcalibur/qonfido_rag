@@ -1,6 +1,4 @@
 """
-Qonfido RAG - Logging Configuration
-====================================
 Setup logging for the application.
 """
 
@@ -9,15 +7,9 @@ import sys
 
 
 def setup_logging(level: str = "INFO") -> None:
-    """
-    Configure application logging.
-    
-    Args:
-        level: Log level (DEBUG, INFO, WARNING, ERROR)
-    """
+
     log_level = getattr(logging, level.upper(), logging.INFO)
     
-    # Configure root logger
     logging.basicConfig(
         level=log_level,
         format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
@@ -38,5 +30,4 @@ def setup_logging(level: str = "INFO") -> None:
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Get a logger with the given name."""
     return logging.getLogger(name)
