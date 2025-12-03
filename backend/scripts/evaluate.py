@@ -2,6 +2,7 @@
 """Evaluate RAG quality using test queries and multiple metrics."""
 
 import argparse
+import asyncio
 import json
 import logging
 import sys
@@ -155,6 +156,7 @@ def evaluate_response(query_info: dict, response, latency_ms: float) -> dict:
 async def run_evaluation(
     mode: str = "hybrid",
     verbose: bool = False,
+    rerank: bool = True,
 ) -> dict:
     """Run evaluation for a specific search mode."""
     logger.info(f"\n{'='*60}")
@@ -166,6 +168,7 @@ async def run_evaluation(
 
     results = []
     total_latency = 0
+    successful_queries = 0
 
     for i, query_info in enumerate(EVAL_QUESTIONS, 1):
         question = query_info["question"]
@@ -180,11 +183,12 @@ async def run_evaluation(
                 query=question,
                 search_mode=SearchMode(mode),
                 top_k=5,
-                rerank=True,
+                rerank=rerank,
             )
             
             latency_ms = (time.time() - start_time) * 1000
             total_latency += latency_ms
+            successful_queries += 1
             
             # Evaluate response
             eval_result = evaluate_response(query_info, response, latency_ms)
@@ -196,6 +200,11 @@ async def run_evaluation(
                 for check in eval_result["checks"]:
                     logger.info(f"   {check}")
                 logger.info(f"   Answer: {response.answer[:80]}...")
+            
+            # Add delay between queries to respect rate limits (e.g., Cohere trial: 10/min)
+            # Sleep 7 seconds between queries when reranking to stay under 10/min limit
+            if i < len(EVAL_QUESTIONS) and rerank:
+                await asyncio.sleep(7)
                 
         except Exception as e:
             logger.error(f"   ERROR: {e}")
@@ -210,7 +219,8 @@ async def run_evaluation(
     
     passed = sum(1 for r in results if r["passed"])
     total = len(results)
-    avg_latency = total_latency / total if total > 0 else 0
+    # Calculate average latency only from successful queries
+    avg_latency = total_latency / successful_queries if successful_queries > 0 else 0
     
     score_keys = ["answer_quality", "keyword_coverage", "confidence", "type_accuracy", "sources_count"]
     avg_scores = {}
@@ -243,13 +253,13 @@ async def run_evaluation(
     return summary
 
 
-async def compare_modes(verbose: bool = False) -> dict:
+async def compare_modes(verbose: bool = False, rerank: bool = True) -> dict:
     """Compare all search modes."""
     modes = ["lexical", "semantic", "hybrid"]
     results = {}
     
     for mode in modes:
-        results[mode] = await run_evaluation(mode=mode, verbose=verbose)
+        results[mode] = await run_evaluation(mode=mode, verbose=verbose, rerank=rerank)
     
     logger.info(f"\n{'='*60}")
     logger.info(f"MODE COMPARISON")
@@ -298,20 +308,25 @@ Examples:
         action="store_true",
         help="Show detailed output for each query",
     )
+    parser.add_argument(
+        "--no-rerank",
+        action="store_true",
+        help="Disable reranking to avoid rate limits (faster evaluation)",
+    )
 
     args = parser.parse_args()
 
     # Setup logging
     log_level = "DEBUG" if args.verbose else "INFO"
     setup_logging(log_level)
-
-    import asyncio
+    
+    rerank_enabled = not args.no_rerank
     
     try:
         if args.mode == "all":
-            results = asyncio.run(compare_modes(verbose=args.verbose))
+            results = asyncio.run(compare_modes(verbose=args.verbose, rerank=rerank_enabled))
         else:
-            results = asyncio.run(run_evaluation(mode=args.mode, verbose=args.verbose))
+            results = asyncio.run(run_evaluation(mode=args.mode, verbose=args.verbose, rerank=rerank_enabled))
         
         if args.output:
             output_path = Path(args.output)
