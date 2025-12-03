@@ -17,7 +17,7 @@ class LLMGenerator:
     def __init__(
         self,
         api_key: str | None = None,
-        model: str = "claude-3-sonnet-20240229",
+        model: str = "claude-sonnet-4-5-20250929",
         fallback_model: str | None = None,
         max_tokens: int = 1024,
         temperature: float = 0.3,

@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     embedding_batch_size: int = Field(32, description="Batch size for embedding")
 
     claude_model: str = Field(
-        "claude-3-haiku-20240307",
+        "claude-sonnet-4-5-20250929",
         description="Claude model to use. Valid models: claude-3-opus-20240229, claude-3-sonnet-20240229, claude-3-haiku-20240307",
     )
     claude_fallback_model: str = Field(
