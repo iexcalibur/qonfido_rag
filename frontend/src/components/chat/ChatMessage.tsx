@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Sparkles, Loader2 } from 'lucide-react';
 import CitationChip from './CitationChip';
 import FundAnalysisResults from './FundAnalysisResults';
@@ -42,7 +44,69 @@ export default function ChatMessage({ message }: ChatMessageProps) {
             </div>
           ) : (
             <>
-              <p className="leading-relaxed text-[15px] whitespace-pre-wrap">{message.content}</p>
+              <div className="leading-relaxed text-[15px] prose prose-invert prose-slate max-w-none [&>*]:whitespace-normal">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ children }) => <h1 className="text-2xl font-bold mt-6 mb-4 text-white">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-xl font-bold mt-5 mb-3 text-white">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-lg font-bold mt-4 mb-2 text-white">{children}</h3>,
+                    h4: ({ children }) => <h4 className="text-base font-bold mt-3 mb-2 text-white">{children}</h4>,
+                    p: ({ children }) => (
+                      <p className="mb-4 last:mb-0 break-words">{children}</p>
+                    ),
+                    strong: ({ children }) => <strong className="font-bold text-white">{children}</strong>,
+                    em: ({ children }) => <em className="italic">{children}</em>,
+                    ul: ({ children }) => (
+                      <ul className="list-disc list-outside mb-4 space-y-3 ml-6 [&>li>ul]:mt-2 [&>li>ul]:ml-4">
+                        {children}
+                      </ul>
+                    ),
+                    ol: ({ children }) => (
+                      <ol className="list-decimal list-outside mb-4 space-y-3 ml-6 [&>li>ol]:mt-2 [&>li>ol]:ml-4">
+                        {children}
+                      </ol>
+                    ),
+                    li: ({ children }) => (
+                      <li className="mb-2 pl-1">
+                        <div className="space-y-1.5 [&>p]:mb-0 [&>p:last-child]:mb-0 [&>ul]:mt-2 [&>ul]:mb-0">
+                          {children}
+                        </div>
+                      </li>
+                    ),
+                    pre: ({ children }) => (
+                      <pre className="bg-slate-800/50 p-3 rounded-lg text-sm font-mono text-indigo-300 overflow-x-auto mb-4">
+                        {children}
+                      </pre>
+                    ),
+                    code: ({ children, ...props }) => {
+                      const isInline = !props.className;
+                      return isInline ? (
+                        <code className="bg-slate-800/50 px-1.5 py-0.5 rounded text-sm font-mono text-indigo-300" {...props}>
+                          {children}
+                        </code>
+                      ) : (
+                        <code className="text-indigo-300" {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-4 border-indigo-500 pl-4 italic text-slate-400 my-4">
+                        {children}
+                      </blockquote>
+                    ),
+                    hr: () => <hr className="my-6 border-slate-700" />,
+                    a: ({ href, children }) => (
+                      <a href={href} className="text-indigo-400 hover:text-indigo-300 underline" target="_blank" rel="noopener noreferrer">
+                        {children}
+                      </a>
+                    ),
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
 
               {message.data?.funds && message.data.funds.length > 0 && (
                 <FundAnalysisResults funds={message.data.funds} />
